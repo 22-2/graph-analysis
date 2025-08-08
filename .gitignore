@@ -5,6 +5,7 @@
 # npm
 node_modules
 package-lock.json
+pnpm-lock.yaml
 
 # build
 # main.js
@@ -12,3 +13,6 @@ package-lock.json
 
 # obsidian
 data.json
+repomix-output.*
+main.js
+main.css

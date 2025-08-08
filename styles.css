@@ -86,14 +86,11 @@ body.is-mobile .GA-details::before {
 }
 
 .scrollContainer {
-  padding: 0px 0px 4px 0px;
-}
-.scrollContainer:hover {
-  padding: 0px;
+  padding: 0;
 }
 
 .GA-View .scrollContainer:hover ::-webkit-scrollbar {
-  height: 4px;
+  /* height: 4px; */
 }
 .GA-View ::-webkit-scrollbar-track {
   border-radius: 10px;

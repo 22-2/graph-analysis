@@ -5,14 +5,16 @@
   import type GraphAnalysisPlugin from 'src/main'
   import FaCreativeCommonsZero from 'svelte-icons/fa/FaCreativeCommonsZero.svelte'
   import FaFire from 'svelte-icons/fa/FaFire.svelte'
+  import FaLink from 'svelte-icons/fa/FaLink.svelte'
   import FaRegSnowflake from 'svelte-icons/fa/FaRegSnowflake.svelte'
+  import FaUnlink from 'svelte-icons/fa/FaUnlink.svelte'
+  import GoSignIn from 'svelte-icons/go/GoSignIn.svelte'
+  import GoSignOut from 'svelte-icons/go/GoSignOut.svelte'
   import IoIosTrendingDown from 'svelte-icons/io/IoIosTrendingDown.svelte'
   import IoIosTrendingUp from 'svelte-icons/io/IoIosTrendingUp.svelte'
   import IoMdRefresh from 'svelte-icons/io/IoMdRefresh.svelte'
   import MdExposureZero from 'svelte-icons/md/MdExposureZero.svelte'
   import InfoIcon from './InfoIcon.svelte'
-  import GoSignOut from 'svelte-icons/go/GoSignOut.svelte'
-  import GoSignIn from 'svelte-icons/go/GoSignIn.svelte'
 
   export let currSubtypeInfo: SubtypeInfo
   export let noZero: boolean = undefined
@@ -20,6 +22,7 @@
   export let ascOrder: boolean = undefined
   export let currFile: TFile = undefined
   export let frozen: boolean = undefined
+  export let excludeLinked: boolean = undefined
   export let plugin: GraphAnalysisPlugin
   export let app: App
   export let view: AnalysisView
@@ -33,6 +36,31 @@
 <span class="GA-Subtype-Options">
   <InfoIcon {currSubtypeInfo} />
 
+  {#if excludeLinked !== undefined}
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <span
+      class="GA-Option-span"
+      aria-label={excludeLinked ? 'Show Linked Notes' : 'Exclude Linked Notes'}
+      on:click={() => {
+        excludeLinked = !excludeLinked
+        if (!frozen) {
+          blockSwitch = true
+          newBatch = []
+          visibleData = []
+          promiseSortedResults = null
+          page = 0
+        }
+      }}
+    >
+      <span class="icon">
+        {#if excludeLinked}
+          <FaUnlink />
+        {:else}
+          <FaLink />
+        {/if}
+      </span>
+    </span>
+  {/if}
   {#if noZero !== undefined}
     <span
       class="GA-Option-span"
@@ -82,6 +110,7 @@
     </span>
   {/if}
   {#if frozen !== undefined}
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
     <span
       class="GA-Option-span"
       aria-label={frozen ? `Frozen on: ${currFile.basename}` : 'Unfrozen'}
@@ -115,6 +144,7 @@
     </span>
   {/if}
   {#if sortBy !== undefined}
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
     <span
       class="GA-Option-span"
       aria-label="Sort By: {sortBy ? 'Authority' : 'Hub'}"
@@ -138,6 +168,7 @@
       </span>
     </span>
   {/if}
+  <!-- svelte-ignore a11y-click-events-have-key-events -->
   <span
     class="GA-Option-span"
     aria-label="Refresh Index"

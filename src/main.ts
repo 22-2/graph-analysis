@@ -103,7 +103,7 @@ export default class GraphAnalysisPlugin extends Plugin {
       // await this.g.initData()
       debug(this.settings, { g: this.g })
       console.timeEnd('Initialise Graph')
-      new Notice('Index Refreshed')
+      // new Notice('Index Refreshed')
     } catch (error) {
       console.log(error)
       new Notice(

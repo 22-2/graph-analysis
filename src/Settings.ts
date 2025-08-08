@@ -1,7 +1,8 @@
 import { App, Notice, PluginSettingTab, Setting } from 'obsidian'
-import { ANALYSIS_TYPES } from 'src/Constants'
+import { ANALYSIS_TYPES, VIEW_TYPE_GRAPH_ANALYSIS } from 'src/Constants'
 import type { Subtype } from 'src/Interfaces'
 import type GraphAnalysisPlugin from 'src/main'
+import AnalysisView from './AnalysisView'
 import Checkboxes from './Components/Checkboxes.svelte'
 
 export class SampleSettingTab extends PluginSettingTab {
@@ -18,6 +19,27 @@ export class SampleSettingTab extends PluginSettingTab {
     const { settings } = plugin
 
     containerEl.empty()
+
+    const restartView = async () => {
+      const leaves = plugin.app.workspace.getLeavesOfType(
+        VIEW_TYPE_GRAPH_ANALYSIS
+      )
+      for (const leaf of leaves) {
+        const view = leaf.view as AnalysisView
+        if (view) {
+          // By setting the state, we trigger the view's setState method, forcing a reload.
+          await leaf.setViewState({
+            type: VIEW_TYPE_GRAPH_ANALYSIS,
+            state: view.getState(),
+          })
+        }
+      }
+    }
+
+    const refreshGraphAndRestartView = async () => {
+      await plugin.refreshGraph()
+      await restartView()
+    }
 
     containerEl.createEl('h3', { text: 'Analysis Defaults' })
 
@@ -53,6 +75,7 @@ export class SampleSettingTab extends PluginSettingTab {
         toggle.setValue(settings.noInfinity).onChange(async (value) => {
           settings.noInfinity = value
           await plugin.saveSettings()
+          await restartView()
         })
       )
 
@@ -63,6 +86,7 @@ export class SampleSettingTab extends PluginSettingTab {
         toggle.setValue(settings.noZero).onChange(async (value) => {
           settings.noZero = value
           await plugin.saveSettings()
+          await restartView()
         })
       )
 
@@ -75,6 +99,7 @@ export class SampleSettingTab extends PluginSettingTab {
         toggle.setValue(settings.allFileExtensions).onChange(async (value) => {
           settings.allFileExtensions = value
           await plugin.saveSettings()
+          await refreshGraphAndRestartView()
         })
       )
 
@@ -87,6 +112,7 @@ export class SampleSettingTab extends PluginSettingTab {
         toggle.setValue(settings.showImgThumbnails).onChange(async (value) => {
           settings.showImgThumbnails = value
           await plugin.saveSettings()
+          await restartView()
         })
       )
 
@@ -99,6 +125,20 @@ export class SampleSettingTab extends PluginSettingTab {
         toggle.setValue(settings.coTags).onChange(async (value) => {
           settings.coTags = value
           await plugin.saveSettings()
+          await restartView()
+        })
+      )
+
+    new Setting(containerEl)
+      .setName('Exclude Linked Notes')
+      .setDesc(
+        'Whether to exclude notes that are already linked to the current note from the results by default.'
+      )
+      .addToggle((toggle) =>
+        toggle.setValue(settings.excludeLinked).onChange(async (value) => {
+          settings.excludeLinked = value
+          await plugin.saveSettings()
+          await restartView()
         })
       )
 
@@ -109,6 +149,7 @@ export class SampleSettingTab extends PluginSettingTab {
         toggle.setValue(settings.addUnresolved).onChange(async (value) => {
           settings.addUnresolved = value
           await plugin.saveSettings()
+          await refreshGraphAndRestartView()
         })
       )
 
@@ -128,29 +169,36 @@ export class SampleSettingTab extends PluginSettingTab {
           }
           settings.exclusionTags = splits
           await plugin.saveSettings()
+          await refreshGraphAndRestartView()
         }
       })
 
     new Setting(containerEl)
       .setName('Exclusion Regex')
       .setDesc(
-        createFragment((el) => {
-          el.createEl('p', {
+        // FIX: Replaced `createFragment` with a manually created DocumentFragment.
+        (() => {
+          const fragment = document.createDocumentFragment()
+          fragment.createEl('p', {
             text: "Regex to exclude values from analysis. If a file name matches this regex, it won't be added to the graph.",
           })
-          const span = el.createSpan()
-          span.createSpan({ text: 'Default is ' })
-          span.createEl('code', { text: '(?:)' })
-          span.createSpan({ text: ' or ' })
-          span.createEl('code', { text: "''" })
-          span.createSpan({
-            text: ' (empty string). Either option will allow all notes through the filter (regular Graph Anlaysis behaviour).',
-          })
 
-          el.createEl('p', {
+          // REFAC: Used a <p> tag for better semantics and structure.
+          const p = fragment.createEl('p')
+          p.appendText('Default is ')
+          p.createEl('code', { text: '(?:)' })
+          p.appendText(' or ')
+          p.createEl('code', { text: "''" })
+          p.appendText(
+            ' (empty string). Either option will allow all notes through the filter (regular Graph Anlaysis behaviour).'
+          )
+
+          fragment.createEl('p', {
             text: 'Remeber that the regex will be tested against the full file path of each note (not just the basename). So you may need to include "folders/" and ".md" for some regexes.',
           })
-        })
+
+          return fragment
+        })()
       )
       .addText((textComp) => {
         textComp.setValue(settings.exclusionRegex)
@@ -161,7 +209,7 @@ export class SampleSettingTab extends PluginSettingTab {
             new RegExp(value)
             settings.exclusionRegex = value
             await plugin.saveSettings()
-            await this.plugin.refreshGraph()
+            await refreshGraphAndRestartView()
           } catch (e) {
             // Invalid regex
             new Notice(

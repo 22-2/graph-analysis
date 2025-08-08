@@ -145,21 +145,53 @@ export const createOrUpdateYaml = async (
 export function openMenu(
   event: MouseEvent,
   app: App,
-  copyObj: { toCopy: string } = undefined
+  options: { toCopy?: string; nodePath?: string } = {}
 ) {
-  const tdEl = event.target
+  const { toCopy, nodePath } = options
   const menu = new Menu(app)
 
-  if (copyObj) {
+  if (toCopy) {
     menu.addItem((item) =>
       item
         .setTitle('Copy community')
         .setIcon('graph')
         .onClick(async () => {
-          await copy(copyObj.toCopy)
+          await copy(toCopy)
         })
     )
-  } else {
+  } else if (nodePath) {
+    const targetFile = app.metadataCache.getFirstLinkpathDest(nodePath, '')
+
+    // New feature: Mutual linking
+    menu.addItem((item) =>
+      item
+        .setTitle('相互リンクを作成')
+        .setIcon('link')
+        .onClick(async () => {
+          const currentFile = app.workspace.getActiveFile()
+          if (!currentFile) {
+            new Notice('アクティブなファイルがありません。')
+            return
+          }
+          if (currentFile.path === nodePath) {
+            new Notice('同じファイルにはリンクできません。')
+            return
+          }
+          if (!targetFile) {
+            // Check if it's a tag
+            if (nodePath.startsWith('#')) {
+              new Notice('タグにはリンクできません。')
+              return
+            }
+            new Notice(`ターゲットファイルが見つかりません: ${nodePath}`)
+            return
+          }
+          await addLinkToMoc(app, currentFile, targetFile)
+          await addLinkToMoc(app, targetFile, currentFile)
+        })
+    )
+
+    // Keep existing functionalities but refactored
     menu.addItem((item) =>
       item
         .setTitle('Create Link: Current')
@@ -167,8 +199,7 @@ export function openMenu(
         .onClick((e) => {
           try {
             const currFile = app.workspace.getActiveFile()
-            // @ts-ignore
-            const targetStr = tdEl.innerText
+            const targetStr = presentPath(nodePath)
             createOrUpdateYaml('key', targetStr, currFile, app)
 
             new Notice('Write Successful')
@@ -184,16 +215,10 @@ export function openMenu(
         .setIcon('documents')
         .onClick((e) => {
           const currStr = app.workspace.getActiveFile().basename
-
-          const { target } = event
-          // @ts-ignore
-          const targetStr = target.innerText
-          const targetFile = app.metadataCache.getFirstLinkpathDest(
-            targetStr,
-            ''
-          )
           if (!targetFile) {
-            new Notice(`${targetStr} does not exist in your vault yet`)
+            new Notice(
+              `${presentPath(nodePath)} does not exist in your vault yet`
+            )
             return
           } else {
             createOrUpdateYaml('key', currStr, targetFile, app)
@@ -390,4 +415,129 @@ export function addPreCocitation(preCocitations: { [name: string]: [number, CoCi
     source,
     line,
   })
+}
+
+/**
+ * 指定されたMOCファイルに、指定されたファイルへのリンクを挿入します。
+ * @param app - ObsidianのAppインスタンス
+ * @param mocFile - リンクを挿入するMOCファイル
+ * @param fileToLink - リンクするファイル
+ */
+export async function addLinkToMoc(app: App, mocFile: TFile, fileToLink: TFile) {
+  try {
+    const content = await app.vault.read(mocFile)
+    const result = _addLinkToMocRelateds(
+      content,
+      fileToLink.basename,
+      app.vault.getConfig('tabSize')
+    )
+
+    if (result.success) {
+      await app.vault.modify(mocFile, result.newContent)
+      new Notice(
+        `${mocFile.basename} の "Relateds" リストに ${fileToLink.basename} へのリンクを追加しました。`
+      )
+    } else if (result.message === 'リンクは既に存在します。') {
+      new Notice(
+        `${mocFile.basename} には既に ${fileToLink.basename} へのリンクが存在します。`
+      )
+    } else {
+      new Notice(`エラー: ${result.message}`)
+    }
+  } catch (error) {
+    console.error('Failed to insert link to MOC:', error)
+    new Notice('MOCへのリンク挿入に失敗しました。')
+  }
+}
+
+/**
+ * "## MOC"セクション内の"- Relateds"リストにWikiリンクを挿入します。
+ * この関数は副作用がなく、文字列操作のみを行います。
+ *
+ * @param content - 操作対象のファイルコンテンツ
+ * @param linkBasename - 挿入するリンクのファイル名 (拡張子なし)
+ * @param tabSize - インデントに使用するスペースの数
+ * @returns 成功した場合は更新されたコンテンツ、失敗した場合はエラーメッセージを持つオブジェクト。
+ */
+export const _addLinkToMocRelateds = (
+  content: string,
+  linkBasename: string,
+  tabSize: number // <--- 変更点: 引数を追加
+): { success: true; newContent: string } | { success: false; message: string } => {
+  const MOC_HEADER_PREFIX = '## MOC'
+  const RELATEDS_LIST_PREFIX = '- Relateds'
+  const WIKI_LINK_TO_ADD = `[[${linkBasename}]]`
+
+  const lines = content.split('\n')
+
+  const mocHeaderIndex = lines.findIndex((line) =>
+    line.trim().startsWith(MOC_HEADER_PREFIX)
+  )
+  if (mocHeaderIndex === -1) {
+    return {
+      success: false,
+      message: `"${MOC_HEADER_PREFIX}" ヘッダーが見つかりません。`,
+    }
+  }
+
+  let relatedsListIndex = -1
+  for (let i = mocHeaderIndex + 1; i < lines.length; i++) {
+    if (lines[i].trim().startsWith('##')) break
+    if (lines[i].trim().startsWith(RELATEDS_LIST_PREFIX)) {
+      relatedsListIndex = i
+      break
+    }
+  }
+  if (relatedsListIndex === -1) {
+    return {
+      success: false,
+      message: `"${MOC_HEADER_PREFIX}" セクションに "${RELATEDS_LIST_PREFIX}" リストが見つかりません。`,
+    }
+  }
+
+  // 既存リンクのチェック
+  for (let i = relatedsListIndex + 1; i < lines.length; i++) {
+    const currentLine = lines[i]
+    if (currentLine.trim().startsWith('##')) break // 次のセクションに到達
+    if (currentLine.includes(WIKI_LINK_TO_ADD)) {
+      return { success: false, message: 'リンクは既に存在します。' }
+    }
+  }
+
+  const relatedsLine = lines[relatedsListIndex]
+  const relatedsIndent = relatedsLine.match(/^\s*/)?.[0] || ''
+
+  let insertIndex = relatedsListIndex + 1
+  while (insertIndex < lines.length) {
+    const currentLine = lines[insertIndex]
+    if (currentLine.trim() === '') {
+      insertIndex++
+      continue
+    }
+    const currentIndent = currentLine.match(/^\s*/)?.[0] || ''
+    if (currentIndent.length <= relatedsIndent.length) break
+    insertIndex++
+  }
+
+  // <--- 変更点: インデント決定ロジック
+  // デフォルトのインデントを tabSize に基づいて設定
+  let newLinkIndent = relatedsIndent + ' '.repeat(tabSize)
+
+  const lastSubItem = lines
+    .slice(relatedsListIndex + 1, insertIndex)
+    .reverse()
+    .find((line) => line.trim() !== '')
+
+  if (lastSubItem) {
+    // 既存のサブ項目がある場合、そのインデントに合わせる
+    const lastItemIndent = lastSubItem.match(/^\s*/)?.[0] || ''
+    if (lastItemIndent.length > relatedsIndent.length) {
+      newLinkIndent = lastItemIndent
+    }
+  }
+
+  const newLinkLine = `${newLinkIndent}- ${WIKI_LINK_TO_ADD}`
+  lines.splice(insertIndex, 0, newLinkLine)
+
+  return { success: true, newContent: lines.join('\n') }
 }

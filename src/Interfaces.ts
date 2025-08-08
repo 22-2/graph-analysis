@@ -96,6 +96,7 @@ export interface GraphAnalysisSettings {
   showImgThumbnails: boolean
   addUnresolved: boolean
   coTags: boolean
+  excludeLinked: boolean
   defaultSubtypeType: Subtype
   debugMode: boolean
   superDebugMode: boolean

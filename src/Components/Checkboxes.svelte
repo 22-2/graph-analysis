@@ -1,5 +1,6 @@
 <script lang="ts">
   import AnalysisView from '../AnalysisView'
+  import { VIEW_TYPE_GRAPH_ANALYSIS } from '../Constants'
 
   import type GraphAnalysisPlugin from '../main'
 
@@ -18,6 +19,18 @@
 
     plugin.settings[settingName] = selected
     await plugin.saveSettings()
+
+    const leaves = plugin.app.workspace.getLeavesOfType(VIEW_TYPE_GRAPH_ANALYSIS)
+    for (const leaf of leaves) {
+      const view = leaf.view as AnalysisView
+      if (view) {
+        // By setting the state, we trigger the view's setState method, forcing a reload.
+        await leaf.setViewState({
+          type: VIEW_TYPE_GRAPH_ANALYSIS,
+          state: view.getState(),
+        })
+      }
+    }
   }
 </script>
 

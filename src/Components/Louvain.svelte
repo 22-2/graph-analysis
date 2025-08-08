@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { App } from 'obsidian'
+  import { MarkdownView } from 'obsidian'
   import { hoverPreview, isInVault, isLinked } from 'obsidian-community-lib'
   import type AnalysisView from 'src/AnalysisView'
   import { ANALYSIS_TYPES, ICON, LINKED, NOT_LINKED } from 'src/Constants'
@@ -14,12 +15,13 @@
     openOrSwitch,
     presentPath,
   } from 'src/Utility'
-  import { onMount } from 'svelte'
+  import { onDestroy, onMount } from 'svelte'
   import FaLink from 'svelte-icons/fa/FaLink.svelte'
   import InfiniteScroll from 'svelte-infinite-scroll'
   import ExtensionIcon from './ExtensionIcon.svelte'
   import ImgThumbnail from './ImgThumbnail.svelte'
   import SubtypeOptions from './SubtypeOptions.svelte'
+  import debounce from 'lodash.debounce'
 
   export let app: App
   export let plugin: GraphAnalysisPlugin
@@ -48,22 +50,6 @@
   let blockSwitch = false
 
   let { resolvedLinks } = app.metadataCache
-
-  app.workspace.on('active-leaf-change', () => {
-    if (!frozen) {
-      blockSwitch = true
-      newBatch = []
-      visibleData = []
-      promiseSortedResults = null
-      page = 0
-
-      setTimeout(() => (currFile = app.workspace.getActiveFile()), 100)
-    }
-  })
-
-  onMount(() => {
-    currNode = currFile?.path
-  })
 
   $: promiseSortedResults =
     !plugin.g || !currNode
@@ -97,8 +83,57 @@
 
   $: visibleData = [...visibleData, ...newBatch]
 
+  const onMetadataChange = async () => {
+    if (!frozen) {
+      blockSwitch = true
+      newBatch = []
+      visibleData = []
+      promiseSortedResults = null
+      page = 0
+      setTimeout(() => (currFile = app.workspace.getActiveFile()), 100)
+      await plugin.refreshGraph()
+      await view.draw(currSubtypeInfo!.subtype)
+    }
+    console.count('louvain change')
+  }
+
+  const onLeafChange = () => {
+    const view = app.workspace.getActiveViewOfType(MarkdownView)
+
+    if (!view) {
+      return
+    }
+
+    const pathEq = view.file?.path === currFile?.path
+    if (pathEq) {
+      return
+    }
+
+    if (!frozen) {
+      blockSwitch = true
+      newBatch = []
+      visibleData = []
+      promiseSortedResults = null
+      page = 0
+      setTimeout(() => (currFile = app.workspace.getActiveFile()), 100)
+    }
+    console.count('louvain leaf change')
+  }
+
+  const debounced = debounce(onMetadataChange, 1000)
+  app.workspace.off('active-leaf-change', onLeafChange)
+  app.metadataCache.off('changed', debounced)
+  plugin.registerEvent(app.workspace.on('active-leaf-change', onLeafChange))
+  plugin.registerEvent(app.metadataCache.on('changed', debounced))
+
   onMount(() => {
+    currNode = currFile?.path
     currFile = app.workspace.getActiveFile()
+  })
+  onDestroy(() => {
+    currNode = undefined
+    app.metadataCache.off('changed', debounced)
+    app.workspace.off('active-leaf-change', onLeafChange)
   })
 </script>
 
@@ -144,14 +179,18 @@
       {#key sortedResults}
         {#each visibleData as node}
           {#if node.to !== currNode && node !== undefined}
+            <!-- svelte-ignore a11y-click-events-have-key-events -->
+            <!-- svelte-ignore a11y-no-static-element-interactions -->
             <div
               class="
-                {node.linked ? LINKED : NOT_LINKED} 
+                {node.linked ? LINKED : NOT_LINKED}
               {classExt(node.to)}"
               on:click={async (e) => await openOrSwitch(app, node.to, e)}
             >
+              <!-- svelte-ignore a11y-mouse-events-have-key-events -->
+              <!-- svelte-ignore a11y-no-static-element-interactions -->
               <span
-                on:contextmenu={(e) => openMenu(e, app)}
+                on:contextmenu={(e) => openMenu(e, app, { nodePath: node.to })}
                 on:mouseover={(e) => hoverPreview(e, view, dropPath(node.to))}
               >
                 {#if node.linked}

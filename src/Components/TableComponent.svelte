@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { App } from 'obsidian'
+  import { MarkdownView } from 'obsidian'
   import { hoverPreview, isInVault, isLinked } from 'obsidian-community-lib'
   import type AnalysisView from 'src/AnalysisView'
   import {
@@ -10,6 +11,7 @@
     NOT_LINKED,
   } from 'src/Constants'
   import type {
+    ComponentResults,
     GraphAnalysisSettings,
     ResultMap,
     Subtype,
@@ -24,12 +26,13 @@
     openOrSwitch,
     presentPath,
   } from 'src/Utility'
-  import { onMount } from 'svelte'
+  import { onDestroy, onMount } from 'svelte'
   import FaLink from 'svelte-icons/fa/FaLink.svelte'
   import InfiniteScroll from 'svelte-infinite-scroll'
   import ExtensionIcon from './ExtensionIcon.svelte'
   import ImgThumbnail from './ImgThumbnail.svelte'
   import SubtypeOptions from './SubtypeOptions.svelte'
+  import debounce from 'lodash.debounce'
 
   export let app: App
   export let plugin: GraphAnalysisPlugin
@@ -41,6 +44,7 @@
   let frozen = false
   let ascOrder = false
   let { noInfinity, noZero } = settings
+  let excludeLinked = settings.excludeLinked
   let currFile = app.workspace.getActiveFile()
 
   interface ComponentResults {
@@ -59,28 +63,11 @@
   let visibleData: ComponentResults[] = []
   let page = 0
   let blockSwitch = false
-
   let { resolvedLinks } = app.metadataCache
-
-  app.workspace.on('active-leaf-change', () => {
-    if (!frozen && !currSubtypeInfo.global) {
-      blockSwitch = true
-      newBatch = []
-      visibleData = []
-      promiseSortedResults = null
-      page = 0
-
-      setTimeout(() => (currFile = app.workspace.getActiveFile()), 100)
-    }
-  })
-
-  onMount(() => {
-    currNode = currFile?.path
-  })
 
   $: promiseSortedResults =
     !plugin.g || !currNode
-      ? null
+      ? console.log('null')
       : plugin.g.algs[currSubtype](currNode)
           .then((results: ResultMap) => {
             const greater = ascOrder ? 1 : -1
@@ -89,12 +76,13 @@
 
             plugin.g.forEachNode((to) => {
               const { measure, extra } = (results as ResultMap)[to]
+              const linked = isLinked(resolvedLinks, currNode, to, false)
               if (
                 !(noInfinity && measure === Infinity) &&
-                !(noZero && measure === 0)
+                !(noZero && measure === 0) &&
+                !(excludeLinked && linked)
               ) {
                 const resolved = !to.endsWith('.md') || isInVault(app, to)
-                const linked = isLinked(resolvedLinks, currNode, to, false)
                 const img =
                   plugin.settings.showImgThumbnails && isImg(to)
                     ? getImgBufferPromise(app, to)
@@ -130,8 +118,60 @@
 
   $: visibleData = [...visibleData, ...newBatch]
 
+  const onMetadataChange = async () => {
+    if (!frozen) {
+      blockSwitch = true
+      newBatch = []
+      visibleData = []
+      promiseSortedResults = null
+      page = 0
+      setTimeout(() => (currFile = app.workspace.getActiveFile()), 100)
+      await plugin.refreshGraph()
+      await view.draw(currSubtypeInfo!.subtype)
+    }
+    console.count('table change')
+  }
+
+  const onLeafChange = () => {
+    const view = app.workspace.getActiveViewOfType(MarkdownView)
+
+    if (!view) {
+      return
+    }
+
+    const pathEq = view.file?.path === currFile?.path
+    if (pathEq) {
+      return
+    }
+
+    if (!frozen) {
+      blockSwitch = true
+      newBatch = []
+      visibleData = []
+      promiseSortedResults = null
+      page = 0
+      setTimeout(() => (currFile = app.workspace.getActiveFile()), 100)
+    }
+    console.count('table component leaf change')
+  }
+
+  const debounced = debounce(onMetadataChange, 1000)
+  app.workspace.off('active-leaf-change', onLeafChange)
+  app.metadataCache.off('changed', debounced)
+  plugin.registerEvent(app.workspace.on('active-leaf-change', onLeafChange))
+  plugin.registerEvent(app.metadataCache.on('changed', debounced))
+
   onMount(() => {
+    /* @ts-ignore */
+    plugin.registerEvent(app.metadataCache.on('changed', debounced))
     currFile = app.workspace.getActiveFile()
+    currNode = currFile?.path
+  })
+
+  onDestroy(() => {
+    currNode = undefined
+    app.metadataCache.off('changed', debounced)
+    app.workspace.off('active-leaf-change', onLeafChange)
   })
 </script>
 
@@ -141,6 +181,7 @@
   bind:ascOrder
   bind:currFile
   bind:frozen
+  bind:excludeLinked
   {app}
   {plugin}
   {view}
@@ -165,14 +206,14 @@
           {#if (currSubtypeInfo.global || node.to !== currNode) && node !== undefined}
             <!-- svelte-ignore a11y-unknown-aria-attribute -->
             <tr
-              class="{node.linked ? LINKED : NOT_LINKED} 
+              class="{node.linked ? LINKED : NOT_LINKED}
             {classExt(node.to)}"
             >
               <td
                 aria-label={node.extra.map(presentPath).join('\n')}
                 aria-label-position="left"
                 on:click={async (e) => await openOrSwitch(app, node.to, e)}
-                on:contextmenu={(e) => openMenu(e, app)}
+                on:contextmenu={(e) => openMenu(e, app, { nodePath: node.to })}
                 on:mouseover={(e) => hoverPreview(e, view, dropPath(node.to))}
               >
                 {#if node.linked}

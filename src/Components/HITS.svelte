@@ -43,6 +43,7 @@
   let sortBy = true
   let ascOrder = false
   let { noInfinity, noZero } = settings
+  let excludeLinked = settings.excludeLinked
   let currFile = app.workspace.getActiveFile()
 
   interface ComponentResults {
@@ -60,6 +61,7 @@
   let visibleData: ComponentResults[] = []
   let page = 0
   let blockSwitch = false
+  let { resolvedLinks } = app.metadataCache
 
   app.workspace.on('active-leaf-change', () => {
     blockSwitch = true
@@ -82,7 +84,8 @@
           plugin.g.forEachNode((to) => {
             const authority = roundNumber(results.authorities[to])
             const hub = roundNumber(results.hubs[to])
-            if (!(authority === 0 && hub === 0)) {
+            const linked = isLinked(resolvedLinks, currNode, to, false)
+            if (!(authority === 0 && hub === 0) && !(excludeLinked && linked)) {
               const resolved = !to.endsWith('.md') || isInVault(app, to)
 
               const img =
@@ -133,6 +136,7 @@
   bind:ascOrder
   bind:sortBy
   bind:currFile
+  bind:excludeLinked
   {app}
   {plugin}
   {view}
@@ -163,14 +167,14 @@
             >
               <td
                 on:click={async (e) => await openOrSwitch(app, node.to, e)}
-                on:contextmenu={(e) => openMenu(e, app)}
+                on:contextmenu={(e) => openMenu(e, app, { nodePath: node.to })}
                 on:mouseover={(e) => hoverPreview(e, view, dropPath(node.to))}
               >
                 <ExtensionIcon path={node.to} />
 
                 <span
-                  class="internal-link 
-                  {node.resolved ? '' : 'is-unresolved'} 
+                  class="internal-link
+                  {node.resolved ? '' : 'is-unresolved'}
                     {currNode === node.to ? 'currNode' : ''}"
                 >
                   {presentPath(node.to)}
