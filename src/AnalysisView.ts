@@ -48,7 +48,7 @@ export default class AnalysisView extends ItemView {
     contentEl.empty()
     contentEl.addClass('GA-View')
 
-    // this.component?.$destroy()
+    this.component?.$destroy()
 
     this.component = new AnalysisComponent({
       target: contentEl,
