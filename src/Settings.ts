@@ -1,10 +1,4 @@
-import {
-  App,
-  Notice,
-  PluginSettingTab,
-  Setting,
-  createFragment,
-} from 'obsidian'
+import { App, Notice, PluginSettingTab, Setting } from 'obsidian'
 import { ANALYSIS_TYPES, VIEW_TYPE_GRAPH_ANALYSIS } from 'src/Constants'
 import type { Subtype } from 'src/Interfaces'
 import type GraphAnalysisPlugin from 'src/main'
@@ -182,23 +176,29 @@ export class SampleSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('Exclusion Regex')
       .setDesc(
-        createFragment((el) => {
-          el.createEl('p', {
+        // FIX: Replaced `createFragment` with a manually created DocumentFragment.
+        (() => {
+          const fragment = document.createDocumentFragment()
+          fragment.createEl('p', {
             text: "Regex to exclude values from analysis. If a file name matches this regex, it won't be added to the graph.",
           })
-          const span = el.createSpan()
-          span.createSpan({ text: 'Default is ' })
-          span.createEl('code', { text: '(?:)' })
-          span.createSpan({ text: ' or ' })
-          span.createEl('code', { text: "''" })
-          span.createSpan({
-            text: ' (empty string). Either option will allow all notes through the filter (regular Graph Anlaysis behaviour).',
-          })
 
-          el.createEl('p', {
+          // REFAC: Used a <p> tag for better semantics and structure.
+          const p = fragment.createEl('p')
+          p.appendText('Default is ')
+          p.createEl('code', { text: '(?:)' })
+          p.appendText(' or ')
+          p.createEl('code', { text: "''" })
+          p.appendText(
+            ' (empty string). Either option will allow all notes through the filter (regular Graph Anlaysis behaviour).'
+          )
+
+          fragment.createEl('p', {
             text: 'Remeber that the regex will be tested against the full file path of each note (not just the basename). So you may need to include "folders/" and ".md" for some regexes.',
           })
-        })
+
+          return fragment
+        })()
       )
       .addText((textComp) => {
         textComp.setValue(settings.exclusionRegex)
