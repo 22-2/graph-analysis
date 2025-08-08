@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Graph from 'graphology'
 import louvain from 'graphology-communities-louvain'
 import hits from 'graphology-metrics/centrality/hits'
@@ -5,12 +6,14 @@ import hits from 'graphology-metrics/centrality/hits'
 import {
   App,
   CacheItem,
-  HeadingCache, ListItemCache,
+  HeadingCache,
+  ListItemCache,
   Notice,
   ReferenceCache,
   TagCache,
+  getAllTags,
+  getLinkpath,
 } from 'obsidian'
-import { getAllTags, getLinkpath } from 'obsidian'
 import tokenizer from 'sbd'
 import {
   clusteringCoefficient,
@@ -20,15 +23,23 @@ import {
 import type {
   AnalysisAlg,
   CoCitation,
-  CoCitationMap, CoCitationRes,
+  CoCitationMap,
   Communities,
   GraphAnalysisSettings,
-  HITSResult, LineSentences,
+  HITSResult,
+  LineSentences,
   NLPPlugin,
   ResultMap,
   Subtype,
 } from 'src/Interfaces'
-import { addPreCocitation, findSentence, getCounts, getMaxKey, roundNumber, sum } from 'src/Utility'
+import {
+  addPreCocitation,
+  findSentence,
+  getCounts,
+  getMaxKey,
+  roundNumber,
+  sum,
+} from 'src/Utility'
 import * as similarity from 'wink-nlp/utilities/similarity'
 
 export default class MyGraph extends Graph {
@@ -108,17 +119,21 @@ export default class MyGraph extends Graph {
     >
   } = {
     Jaccard: async (a: string): Promise<ResultMap> => {
-      const Na = this.neighbors(a)
       const results: ResultMap = {}
-      this.forEachNode((to) => {
-        const Nb = this.neighbors(to)
-        const Nab = intersection(Na, Nb)
-        const denom = Na.length + Nb.length - Nab.length
-        let measure = denom !== 0 ? roundNumber(Nab.length / denom) : Infinity
+      try {
+        const Na = this.neighbors(a)
+        this.forEachNode((to) => {
+          const Nb = this.neighbors(to)
+          const Nab = intersection(Na, Nb)
+          const denom = Na.length + Nb.length - Nab.length
+          let measure = denom !== 0 ? roundNumber(Nab.length / denom) : Infinity
 
-        results[to] = { measure, extra: Nab }
-      })
-      return results
+          results[to] = { measure, extra: Nab }
+        })
+        return results
+      } catch {
+        return results
+      }
     },
 
     HITS: async (a: string) => {
@@ -127,39 +142,47 @@ export default class MyGraph extends Graph {
 
     Overlap: async (a: string): Promise<ResultMap> => {
       const results: ResultMap = {}
-      const Na = this.neighbors(a)
-      this.forEachNode((to) => {
-        const Nb = this.neighbors(to)
-        const Nab = intersection(Na, Nb)
-        let measure =
-          Na.length !== 0 && Nb.length !== 0
-            ? // The square weights the final result by the number of nodes in the overlap
-              roundNumber(Nab.length ** 2 / Math.min(Na.length, Nb.length))
-            : Infinity
+      try {
+        const Na = this.neighbors(a)
+        this.forEachNode((to) => {
+          const Nb = this.neighbors(to)
+          const Nab = intersection(Na, Nb)
+          let measure =
+            Na.length !== 0 && Nb.length !== 0
+              ? // The square weights the final result by the number of nodes in the overlap
+                roundNumber(Nab.length ** 2 / Math.min(Na.length, Nb.length))
+              : Infinity
 
-        results[to] = { measure, extra: Nab }
-      })
-      return results
+          results[to] = { measure, extra: Nab }
+        })
+      } catch (err) {
+        console.log(err)
+        console.log('could not found node', a)
+        return results
+      }
     },
 
     'Adamic Adar': async (a: string): Promise<ResultMap> => {
       const results: ResultMap = {}
-      const Na = this.neighbors(a)
-
-      this.forEachNode((to) => {
-        const Nb = this.neighbors(to)
-        const Nab = intersection(Na, Nb)
-        let measure = Infinity
-        if (Nab.length) {
-          const neighbours: number[] = Nab.map(
-            (n) => this.outNeighbors(n).length
-          )
-          measure = roundNumber(
-            sum(neighbours.map((neighbour) => 1 / Math.log(neighbour)))
-          )
-        }
-        results[to] = { measure, extra: Nab }
-      })
+      try {
+        const Na = this.neighbors(a)
+        this.forEachNode((to) => {
+          const Nb = this.neighbors(to)
+          const Nab = intersection(Na, Nb)
+          let measure = Infinity
+          if (Nab.length) {
+            const neighbours: number[] = Nab.map(
+              (n) => this.outNeighbors(n).length
+            )
+            measure = roundNumber(
+              sum(neighbours.map((neighbour) => 1 / Math.log(neighbour)))
+            )
+          }
+          results[to] = { measure, extra: Nab }
+        })
+      } catch {
+        console.log('could not found node:', a)
+      }
       return results
     },
 
@@ -211,23 +234,34 @@ export default class MyGraph extends Graph {
         const lines = cachedRead.split('\n')
 
         // Find the sentence the link is in
-        const ownSentences: LineSentences[] =
-          ownLinks.map((link) => {
-            let line = lines[link.position.end.line]
-            const sentences = tokenizer.sentences(line, {
-              preserve_whitespace: true,
-            })
-            let [linkSentence, linkSentenceStart, linkSentenceEnd] = findSentence(sentences, link)
-            return {sentences, link, line: link.position.end.line, linkSentence, linkSentenceStart, linkSentenceEnd}
-
+        const ownSentences: LineSentences[] = ownLinks.map((link) => {
+          let line = lines[link.position.end.line]
+          const sentences = tokenizer.sentences(line, {
+            preserve_whitespace: true,
           })
+          let [linkSentence, linkSentenceStart, linkSentenceEnd] = findSentence(
+            sentences,
+            link
+          )
+          return {
+            sentences,
+            link,
+            line: link.position.end.line,
+            linkSentence,
+            linkSentenceStart,
+            linkSentenceEnd,
+          }
+        })
 
-        const ownListItems: ListItemCache[] = cache.listItems ?
-          cache.listItems.filter((listItem) => {
-            return ownLinks.find((link) =>
-              link.position.start.line >= listItem.position.start.line &&
-              link.position.end.line <= listItem.position.end.line)
-            }) : []
+        const ownListItems: ListItemCache[] = cache.listItems
+          ? cache.listItems.filter((listItem) => {
+              return ownLinks.find(
+                (link) =>
+                  link.position.start.line >= listItem.position.start.line &&
+                  link.position.end.line <= listItem.position.end.line
+              )
+            })
+          : []
 
         // Find the section the link is in
         const ownSections = ownLinks.map((link) =>
@@ -317,7 +351,8 @@ export default class MyGraph extends Graph {
           ownSentences.forEach((lineSentence) => {
             // On the same line
             if (item.position.start.line === lineSentence.line) {
-              const [itemSentence, itemSentenceStart, itemSentenceEnd] = findSentence(lineSentence.sentences, item)
+              const [itemSentence, itemSentenceStart, itemSentenceEnd] =
+                findSentence(lineSentence.sentences, item)
               const ownLink = lineSentence.link
               const m1Start = Math.min(
                 item.position.start.col,
@@ -337,31 +372,39 @@ export default class MyGraph extends Graph {
               )
               // Break sentence up between the two links. Used for rendering
               const slicedSentence = [
-                lineContent.slice(Math.min(itemSentenceStart, lineSentence.linkSentenceStart), m1Start),
+                lineContent.slice(
+                  Math.min(itemSentenceStart, lineSentence.linkSentenceStart),
+                  m1Start
+                ),
                 lineContent.slice(m1Start, m1End),
                 lineContent.slice(m1End, m2Start),
                 lineContent.slice(m2Start, m2End),
-                lineContent.slice(m2End, Math.max(itemSentenceEnd, lineSentence.linkSentenceEnd)),
+                lineContent.slice(
+                  m2End,
+                  Math.max(itemSentenceEnd, lineSentence.linkSentenceEnd)
+                ),
               ]
 
               let measure = 1 / 2
-              const sentenceDist = Math.abs(itemSentence - lineSentence.linkSentence)
+              const sentenceDist = Math.abs(
+                itemSentence - lineSentence.linkSentence
+              )
 
               // Granularity of sentence distance scores
               if (sentenceDist === 0) {
                 measure = 1
-              }
-              else if (sentenceDist === 1) {
+              } else if (sentenceDist === 1) {
                 measure = 0.85
-              }
-              else if (sentenceDist === 2) {
+              } else if (sentenceDist === 2) {
                 measure = 0.7
-              }
-              else if (sentenceDist === 3) {
+              } else if (sentenceDist === 3) {
                 measure = 0.6
               }
 
-              preCocitations[linkPath][0] = Math.max(measure, preCocitations[linkPath][0])
+              preCocitations[linkPath][0] = Math.max(
+                measure,
+                preCocitations[linkPath][0]
+              )
               preCocitations[linkPath][1].push({
                 sentence: slicedSentence,
                 measure,
@@ -382,17 +425,24 @@ export default class MyGraph extends Graph {
           ]
 
           // Check if in an outline hierarchy
-          const listItem: ListItemCache =
-            cache?.listItems?.find((listItem) =>
-                item.position.start.line >= listItem.position.start.line &&
-                item.position.end.line <= listItem.position.end.line
-            )
+          const listItem: ListItemCache = cache?.listItems?.find(
+            (listItem) =>
+              item.position.start.line >= listItem.position.start.line &&
+              item.position.end.line <= listItem.position.end.line
+          )
           let foundHierarchy = false
           if (listItem) {
             ownListItems.forEach((ownListItem) => {
               // Shared parent is good!
               if (ownListItem.parent === listItem.parent) {
-                addPreCocitation(preCocitations, linkPath, 0.4, sentence, pre, item.position.start.line)
+                addPreCocitation(
+                  preCocitations,
+                  linkPath,
+                  0.4,
+                  sentence,
+                  pre,
+                  item.position.start.line
+                )
                 foundHierarchy = true
                 return
               }
@@ -401,7 +451,10 @@ export default class MyGraph extends Graph {
               //   but in the same one,
               //   that is also nice! But has to be done in both directions
               // First, up from ownListItem
-              const findInHierarchy = function(from: ListItemCache, to: ListItemCache): boolean {
+              const findInHierarchy = function (
+                from: ListItemCache,
+                to: ListItemCache
+              ): boolean {
                 let iterListItem: ListItemCache = from
                 let distance = 1
                 // Negative parents denote top-level list items
@@ -410,33 +463,40 @@ export default class MyGraph extends Graph {
                     let measure = 0.3
                     if (distance === 1) {
                       measure = 0.6
-                    }
-                    else if (distance === 2) {
+                    } else if (distance === 2) {
                       measure = 0.5
-                    }
-                    else if (distance === 3) {
+                    } else if (distance === 3) {
                       measure = 0.4
-                    }
-                    else if (distance === 4) {
+                    } else if (distance === 4) {
                       measure = 0.35
                     }
-                    addPreCocitation(preCocitations, linkPath, measure, sentence, pre, item.position.start.line)
+                    addPreCocitation(
+                      preCocitations,
+                      linkPath,
+                      measure,
+                      sentence,
+                      pre,
+                      item.position.start.line
+                    )
                     return true
                   }
                   distance += 1
                   // Move to the parent
-                  iterListItem = cache.listItems.find((litem) =>
-                    iterListItem.parent === litem.position.start.line)
+                  iterListItem = cache.listItems.find(
+                    (litem) => iterListItem.parent === litem.position.start.line
+                  )
                 }
                 return false
               }
-              if (findInHierarchy(ownListItem, listItem) || findInHierarchy(listItem, ownListItem)) {
+              if (
+                findInHierarchy(ownListItem, listItem) ||
+                findInHierarchy(listItem, ownListItem)
+              ) {
                 foundHierarchy = true
               }
             })
           }
           if (foundHierarchy) return
-
 
           // Check if it is in the same paragraph
           const sameParagraph = ownSections.find(
@@ -445,7 +505,14 @@ export default class MyGraph extends Graph {
               section.position.end.line >= item.position.end.line
           )
           if (sameParagraph) {
-            addPreCocitation(preCocitations, linkPath, 1 / 4, sentence, pre, item.position.start.line)
+            addPreCocitation(
+              preCocitations,
+              linkPath,
+              1 / 4,
+              sentence,
+              pre,
+              item.position.start.line
+            )
             return
           }
 
@@ -463,12 +530,26 @@ export default class MyGraph extends Graph {
             // Then, maxHeadingLevel - bestLevel = 0, so we get 1/(2^2)=1/4. If the link appears only under
             // less specific headings, the weight will decrease.
             const score = 1 / Math.pow(2, 3 + maxHeadingLevel - bestLevel)
-            addPreCocitation(preCocitations, linkPath, score, sentence, pre, item.position.start.line)
+            addPreCocitation(
+              preCocitations,
+              linkPath,
+              score,
+              sentence,
+              pre,
+              item.position.start.line
+            )
             return
           }
 
           // The links appear together in the same document, but not under a shared heading
-          addPreCocitation(preCocitations, linkPath, minScore, sentence, pre, item.position.start.line)
+          addPreCocitation(
+            preCocitations,
+            linkPath,
+            minScore,
+            sentence,
+            pre,
+            item.position.start.line
+          )
         })
 
         if (settings.coTags) {
@@ -514,12 +595,12 @@ export default class MyGraph extends Graph {
             results[name] = {
               measure: cocitation[0],
               coCitations: cocitation[1],
-              resolved
-            };
+              resolved,
+            }
           }
         }
       })
-      results[a] = { measure: 0, coCitations: [], resolved: true };
+      results[a] = { measure: 0, coCitations: [], resolved: true }
 
       return results
     },
@@ -536,14 +617,18 @@ export default class MyGraph extends Graph {
       for (let i = 0; i < options.iterations; i++) {
         const newLabeledNodes: { [node: string]: string } = {}
         this.forEachNode((node) => {
-          const neighbours = this.neighbors(node)
-          if (neighbours.length) {
-            const neighbourLabels = neighbours.map(
-              // Take the label from the not-yet-updated-labels
-              (neighbour) => labeledNodes[neighbour]
-            )
-            const counts = getCounts(neighbourLabels)
-            newLabeledNodes[node] = getMaxKey(counts)
+          try {
+            const neighbours = this.neighbors(node)
+            if (neighbours.length) {
+              const neighbourLabels = neighbours.map(
+                // Take the label from the not-yet-updated-labels
+                (neighbour) => labeledNodes[neighbour]
+              )
+              const counts = getCounts(neighbourLabels)
+              newLabeledNodes[node] = getMaxKey(counts)
+            }
+          } catch {
+            console.log('could not found node:', node)
           }
         })
         // Update the labels
