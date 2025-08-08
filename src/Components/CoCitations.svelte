@@ -1,42 +1,25 @@
 <script lang="ts">
   import type { App } from 'obsidian'
   import { MarkdownView } from 'obsidian'
+  import { hoverPreview, isInVault, isLinked } from 'obsidian-community-lib'
   import type AnalysisView from 'src/AnalysisView'
-  import {
-    ANALYSIS_TYPES,
-    ICON,
-    LINKED,
-    MEASURE,
-    NODE,
-    NOT_LINKED,
-  } from 'src/Constants'
-  import type {
-    CoCitation,
-    CoCitationMap,
-    CoCitationRes,
-    GraphAnalysisSettings,
-    Subtype,
-  } from 'src/Interfaces'
+  import { ANALYSIS_TYPES, ICON, LINKED, NOT_LINKED } from 'src/Constants'
+  import type { GraphAnalysisSettings, Subtype } from 'src/Interfaces'
   import type GraphAnalysisPlugin from 'src/main'
   import {
     classExt,
-    debug,
     dropPath,
     getImgBufferPromise,
-    hoverPreview,
     isImg,
-    looserIsLinked,
     openMenu,
     openOrSwitch,
     presentPath,
-    roundNumber,
   } from 'src/Utility'
   import { onDestroy, onMount } from 'svelte'
   import FaLink from 'svelte-icons/fa/FaLink.svelte'
   import InfiniteScroll from 'svelte-infinite-scroll'
   import ExtensionIcon from './ExtensionIcon.svelte'
   import ImgThumbnail from './ImgThumbnail.svelte'
-  import RenderedMarkdown from './RenderedMarkdown.svelte'
   import SubtypeOptions from './SubtypeOptions.svelte'
   import debounce from 'lodash.debounce'
 
@@ -47,74 +30,59 @@
   export let currSubtype: Subtype
 
   $: currSubtypeInfo = ANALYSIS_TYPES.find((sub) => sub.subtype === currSubtype)
+  let frozen = false
+  let currFile = app.workspace.getActiveFile()
+  let excludeLinked = settings.excludeLinked
 
-  interface CoCiteComp {
-    measure: number
-    coCitations: CoCitation[]
+  let resolution = 10
+  interface ComponentResults {
     linked: boolean
-    resolved: boolean
     to: string
+    resolved: boolean
+    img: Promise<ArrayBuffer> | null
   }
 
-  let frozen = false
+  $: currNode = currFile?.path
   let size = 50
-
   let current_component: HTMLElement
-  let newBatch: CoCiteComp[] = []
-  let visibleData: CoCiteComp[] = []
+  let newBatch: ComponentResults[] = []
+  let visibleData: ComponentResults[] = []
   let page = 0
   let blockSwitch = false
 
-  let currFile = app.workspace.getActiveFile()
-  $: currNode = currFile?.path
+  let { resolvedLinks } = app.metadataCache
 
-  let ascOrder = false
   $: promiseSortedResults =
-    !currNode || !plugin.g
+    !plugin.g || !currNode
       ? null
-      : plugin.g.algs['Co-Citations'](currNode)
-        .then((ccMap: CoCitationMap) => {
-          Object.values(ccMap).forEach((value: CoCitationRes) => {
-            value.coCitations = value.coCitations.sort((a, b) => {
-              return a.measure > b.measure ? -1 : 1
+      : plugin.g.algs['Louvain'](currNode, { resolution })
+          .then((results: string[]) => {
+            const componentResults: ComponentResults[] = []
+            results.forEach((to) => {
+              const resolved = !to.endsWith('.md') || isInVault(app, to)
+              const linked = isLinked(resolvedLinks, currNode, to, false)
+              if (!(excludeLinked && linked)) {
+                const img =
+                  plugin.settings.showImgThumbnails && isImg(to)
+                    ? getImgBufferPromise(app, to)
+                    : null
+                componentResults.push({
+                  linked,
+                  to,
+                  resolved,
+                  img,
+                })
+              }
             })
+            return componentResults
           })
-          const greater = ascOrder ? 1 : -1
-          const lesser = ascOrder ? -1 : 1
-          const sortedCites: CoCiteComp[] = []
-          Object.keys(ccMap).forEach((to) => {
-            let { coCitations, measure, resolved } = ccMap[
-              to
-              ] as CoCitationRes
-            if (measure !== 0 && measure !== Infinity) {
-              sortedCites.push({
-                measure,
-                coCitations,
-                linked: looserIsLinked(app, to, currNode, false),
-                resolved,
-                to,
-              })
-            }
+          .then((res) => {
+            newBatch = res.slice(0, size)
+            setTimeout(() => {
+              blockSwitch = false
+            }, 100)
+            return res
           })
-          sortedCites.sort((a, b) => {
-            return a.measure > b.measure
-              ? greater
-              : a.measure !== b.measure ||
-              presentPath(a.to).toLowerCase() >
-              presentPath(b.to).toLowerCase()
-                ? lesser
-                : greater
-          })
-          return sortedCites
-        })
-        .then((res) => {
-          newBatch = res.slice(0, size)
-          debug(settings, { res })
-          setTimeout(() => {
-            blockSwitch = false
-          }, 100)
-          return res
-        })
 
   $: visibleData = [...visibleData, ...newBatch]
 
@@ -129,7 +97,7 @@
       await plugin.refreshGraph()
       await view.draw(currSubtypeInfo!.subtype)
     }
-    console.count('coci change')
+    console.count('louvain change')
   }
 
   const onLeafChange = () => {
@@ -152,8 +120,9 @@
       page = 0
       setTimeout(() => (currFile = app.workspace.getActiveFile()), 100)
     }
-    console.count('coci leaf change')
+    console.count('louvain leaf change')
   }
+
   const debounced = debounce(onMetadataChange, 1000)
   app.workspace.off('active-leaf-change', onLeafChange)
   app.metadataCache.off('changed', debounced)
@@ -161,22 +130,21 @@
   plugin.registerEvent(app.metadataCache.on('changed', debounced))
 
   onMount(() => {
-    // console.log("cc.mounted")
+    currNode = currFile?.path
     currFile = app.workspace.getActiveFile()
-    plugin.registerEvent(app.metadataCache.on('changed', debounced))
-    debug(settings, { promiseSortedResults })
   })
   onDestroy(() => {
+    currNode = undefined
     app.metadataCache.off('changed', debounced)
     app.workspace.off('active-leaf-change', onLeafChange)
   })
 </script>
 
 <SubtypeOptions
-  bind:ascOrder
-  bind:frozen
+  bind:currSubtypeInfo
   bind:currFile
-  {currSubtypeInfo}
+  bind:frozen
+  bind:excludeLinked
   {app}
   {plugin}
   {view}
@@ -187,83 +155,65 @@
   bind:page
 />
 
-<div class="GA-CCs" bind:this={current_component}>
+<label for="resolution">Resolution: </label>
+<input
+  name="resolution"
+  type="range"
+  min="1"
+  max="20"
+  value={resolution}
+  on:change={(e) => {
+    const value = Number.parseInt(e.target.value)
+
+    if (!frozen) {
+      blockSwitch = true
+      newBatch = []
+      visibleData = []
+      promiseSortedResults = null
+      page = 0
+    }
+    console.log({ value })
+    resolution = value
+  }}
+/>
+
+<div class="GA-Results" bind:this={current_component}>
   {#if promiseSortedResults}
     {#await promiseSortedResults then sortedResults}
       {#key sortedResults}
         {#each visibleData as node}
           {#if node.to !== currNode && node !== undefined}
-            <div class="GA-CC">
-              <details>
-                <summary>
-                  <span class="top-row">
-                    <span
-                      class="
-                                     {classExt(node.to)}
-                                     {node.linked ? LINKED : NOT_LINKED}
-                                     {NODE}"
-                      on:click={async (e) => {
-                        if (node.to[0] !== '#') {
-                          await openOrSwitch(app, node.to, e)
-                        }
-                      }}
-                      on:contextmenu={(e) => openMenu(e, app)}
-                      on:mouseover={(e) =>
-                        hoverPreview(e, view, dropPath(node.to))}
-                    >
-                      {#if node.to[0] === '#'}
-                        <!-- svelte-ignore a11y-missing-attribute -->
-                        <a class="tag">{node.to}</a>
-                      {:else}
-                        {#if node.linked}
-                          <span class={ICON}>
-                            <FaLink />
-                          </span>
-                        {/if}
-                        <ExtensionIcon path={node.to} />
-                        <span
-                          class="
-                                     internal-link
-                                     {node.resolved ? '' : 'is-unresolved'}"
-                        >
-                          {presentPath(node.to)}
-                        </span>
-                        {#if plugin.settings.showImgThumbnails && isImg(node.to)}
-                          <ImgThumbnail
-                            img={getImgBufferPromise(app, node.to)}
-                          />
-                        {/if}
-                      {/if}
-                    </span>
-                    <span class={MEASURE}>{roundNumber(node.measure, 3)}</span>
+            <!-- svelte-ignore a11y-click-events-have-key-events -->
+            <!-- svelte-ignore a11y-no-static-element-interactions -->
+            <div
+              class="
+                {node.linked ? LINKED : NOT_LINKED}
+              {classExt(node.to)}"
+              on:click={async (e) => await openOrSwitch(app, node.to, e)}
+            >
+              <!-- svelte-ignore a11y-mouse-events-have-key-events -->
+              <!-- svelte-ignore a11y-no-static-element-interactions -->
+              <span
+                on:contextmenu={(e) => openMenu(e, app)}
+                on:mouseover={(e) => hoverPreview(e, view, dropPath(node.to))}
+              >
+                {#if node.linked}
+                  <span class={ICON}>
+                    <FaLink />
                   </span>
-                </summary>
-                <div class="GA-details">
-                  {#each node.coCitations as coCite}
-                    <div class="CC-item">
-                      <span
-                        class="internal-link {NODE}"
-                        on:click={async (e) =>
-                          await openOrSwitch(app, coCite.source, e)}
-                        on:contextmenu={(e) => openMenu(e, app)}
-                        on:mouseover={(e) =>
-                          hoverPreview(e, view, dropPath(coCite.source))}
-                      >
-                        {presentPath(coCite.source)}
-                      </span>
-                      <span class={MEASURE}>
-                        {roundNumber(coCite.measure, 3)}
-                      </span>
-                    </div>
-                    <RenderedMarkdown
-                      sentence={coCite.sentence}
-                      sourcePath={coCite.source}
-                      {app}
-                      line={coCite.line}
-                    />
-                  {/each}
-                </div>
-              </details>
+                {/if}
+
+                <ExtensionIcon path={node.to} />
+
+                <span
+                  class="internal-link {node.resolved ? '' : 'is-unresolved'}"
+                >
+                  {presentPath(node.to)}
+                </span>
+                {#if isImg(node.to)}
+                  <ImgThumbnail img={node.img} />
+                {/if}
+              </span>
             </div>
           {/if}
         {/each}
@@ -276,6 +226,7 @@
             if (!blockSwitch) {
               page++
               newBatch = sortedResults.slice(size * page, size * (page + 1) - 1)
+              console.log({ newBatch })
             }
           }}
         />
@@ -286,53 +237,14 @@
 </div>
 
 <style>
-  .GA-CCs {
-    display: flex;
-    flex-direction: column;
-    padding-left: 10px;
+  .GA-Results > div {
+    padding: 0px 5px;
   }
-
-  /* .GA-CC {
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 3px;
-    padding: 5px;
-  } */
-
   .is-unresolved {
     color: var(--text-muted);
   }
 
-  .tag {
-    border-radius: 15px !important;
-  }
-
-  .GA-node,
-  .CC-sentence {
-    font-size: var(--font-size-secondary);
-    border: 1px solid transparent;
-    border-radius: 5px;
-  }
-
-  .CC-sentence:hover {
-    background-color: var(--background-secondary-alt);
-  }
-  span.GA-measure {
-    background-color: var(--background-secondary-alt);
-    padding: 2px 4px;
-    border-radius: 3px;
-    font-size: 12px;
-    line-height: 12px;
-  }
-  span.GA-measure:hover {
-    background-color: var(--interactive-accent);
-  }
-
-  .CC-item {
-    padding-left: 30px;
-    font-weight: 600;
-  }
-
-  .top-row > span + span {
-    float: right;
+  .GA-node {
+    overflow: hidden;
   }
 </style>

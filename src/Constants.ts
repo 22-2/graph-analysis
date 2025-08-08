@@ -7,6 +7,7 @@ export const DEFAULT_SETTINGS: GraphAnalysisSettings = {
   showImgThumbnails: true,
   addUnresolved: true,
   coTags: true,
+  excludeLinked: false,
   defaultSubtypeType: 'Co-Citations',
   debugMode: false,
   superDebugMode: false,

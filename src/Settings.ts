@@ -103,6 +103,18 @@ export class SampleSettingTab extends PluginSettingTab {
       )
 
     new Setting(containerEl)
+      .setName('Exclude Linked Notes')
+      .setDesc(
+        'Whether to exclude notes that are already linked to the current note from the results by default.'
+      )
+      .addToggle((toggle) =>
+        toggle.setValue(settings.excludeLinked).onChange(async (value) => {
+          settings.excludeLinked = value
+          await plugin.saveSettings()
+        })
+      )
+
+    new Setting(containerEl)
       .setName('Include Unresolved Links')
       .setDesc('Whether to also show links that have not yet been created.')
       .addToggle((toggle) =>

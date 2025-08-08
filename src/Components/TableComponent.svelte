@@ -44,6 +44,7 @@
   let frozen = false
   let ascOrder = false
   let { noInfinity, noZero } = settings
+  let excludeLinked = settings.excludeLinked
   let currFile = app.workspace.getActiveFile()
 
   interface ComponentResults {
@@ -75,12 +76,13 @@
 
             plugin.g.forEachNode((to) => {
               const { measure, extra } = (results as ResultMap)[to]
+              const linked = isLinked(resolvedLinks, currNode, to, false)
               if (
                 !(noInfinity && measure === Infinity) &&
-                !(noZero && measure === 0)
+                !(noZero && measure === 0) &&
+                !(excludeLinked && linked)
               ) {
                 const resolved = !to.endsWith('.md') || isInVault(app, to)
-                const linked = isLinked(resolvedLinks, currNode, to, false)
                 const img =
                   plugin.settings.showImgThumbnails && isImg(to)
                     ? getImgBufferPromise(app, to)
@@ -179,6 +181,7 @@
   bind:ascOrder
   bind:currFile
   bind:frozen
+  bind:excludeLinked
   {app}
   {plugin}
   {view}
