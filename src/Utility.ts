@@ -1,9 +1,12 @@
 import {
-  App, CacheItem,
-  EditorRange, LinkCache,
+  App,
+  CacheItem,
+  EditorRange,
+  LinkCache,
   MarkdownView,
   Menu,
-  Notice, ReferenceCache,
+  Notice,
+  ReferenceCache,
   TFile,
   WorkspaceLeaf,
 } from 'obsidian'
@@ -18,7 +21,8 @@ import type AnalysisView from 'src/AnalysisView'
 import { DECIMALS, IMG_EXTENSIONS, LINKED, NOT_LINKED } from 'src/Constants'
 import type {
   ComponentResults,
-  GraphAnalysisSettings, LineSentences,
+  GraphAnalysisSettings,
+  LineSentences,
   ResultMap,
   Subtype,
 } from 'src/Interfaces'
@@ -363,28 +367,34 @@ export async function openOrSwitch(
   const leavesWithDestAlreadyOpen: WorkspaceLeaf[] = []
   workspace.iterateAllLeaves((leaf) => {
     if (leaf.view instanceof MarkdownView) {
-      if (leaf.view?.file?.basename === dropExt(dest)) {
+      if (leaf.view?.file?.path === destFile.path) {
         leavesWithDestAlreadyOpen.push(leaf)
       }
     }
   })
 
+  const openInNewTab =
+    event.ctrlKey || event.getModifierState('Meta') || event.button === 1
+
   // Rather switch to it if it is open
-  if (leavesWithDestAlreadyOpen.length > 0) {
+  if (leavesWithDestAlreadyOpen.length > 0 && !openInNewTab) {
     workspace.setActiveLeaf(leavesWithDestAlreadyOpen[0])
   } else {
+    event.preventDefault()
     // @ts-ignore
     const mode = app.vault.getConfig('defaultViewMode') as string
-    const leaf =
-      event.ctrlKey || event.getModifierState('Meta')
-        ? workspace.splitActiveLeaf()
-        : workspace.getUnpinnedLeaf()
+    const leaf = openInNewTab
+      ? workspace.splitActiveLeaf()
+      : workspace.getUnpinnedLeaf()
 
     await leaf.openFile(destFile, { active: true, mode })
   }
 }
 
-export function findSentence(sentences: [string], link: CacheItem): [number, number, number] {
+export function findSentence(
+  sentences: [string],
+  link: CacheItem
+): [number, number, number] {
   let aggrSentenceLength = 0
   let count = 0
   for (const sentence of sentences) {
@@ -399,16 +409,15 @@ export function findSentence(sentences: [string], link: CacheItem): [number, num
   return [-1, 0, aggrSentenceLength]
 }
 
-export function addPreCocitation(preCocitations: { [name: string]: [number, CoCitation[]] },
-                                 linkPath: string,
-                                 measure: number,
-                                 sentence: string[],
-                                 source: string,
-                                 line: number) {
-  preCocitations[linkPath][0] = Math.max(
-    preCocitations[linkPath][0],
-    measure
-  )
+export function addPreCocitation(
+  preCocitations: { [name: string]: [number, CoCitation[]] },
+  linkPath: string,
+  measure: number,
+  sentence: string[],
+  source: string,
+  line: number
+) {
+  preCocitations[linkPath][0] = Math.max(preCocitations[linkPath][0], measure)
   preCocitations[linkPath][1].push({
     sentence,
     measure,
@@ -423,7 +432,11 @@ export function addPreCocitation(preCocitations: { [name: string]: [number, CoCi
  * @param mocFile - リンクを挿入するMOCファイル
  * @param fileToLink - リンクするファイル
  */
-export async function addLinkToMoc(app: App, mocFile: TFile, fileToLink: TFile) {
+export async function addLinkToMoc(
+  app: App,
+  mocFile: TFile,
+  fileToLink: TFile
+) {
   try {
     const content = await app.vault.read(mocFile)
     const result = _addLinkToMocRelateds(
@@ -463,7 +476,9 @@ export const _addLinkToMocRelateds = (
   content: string,
   linkBasename: string,
   tabSize: number // <--- 変更点: 引数を追加
-): { success: true; newContent: string } | { success: false; message: string } => {
+):
+  | { success: true; newContent: string }
+  | { success: false; message: string } => {
   const MOC_HEADER_PREFIX = '## MOC'
   const RELATEDS_LIST_PREFIX = '- Relateds'
   const WIKI_LINK_TO_ADD = `[[${linkBasename}]]`

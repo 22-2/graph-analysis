@@ -32,9 +32,11 @@
 <div
   class="CC-sentence"
   bind:this={el}
-  on:click={async (e) => {
-    await openOrSwitch(app, sourcePath, e)
-    jumpToSelection(app, line, sentence.join(''))
+  on:mousedown={async (e) => {
+    if (e.button === 0 || e.button === 1) {
+      await openOrSwitch(app, sourcePath, e)
+      jumpToSelection(app, line, sentence.join(''))
+    }
   }}
 />
 

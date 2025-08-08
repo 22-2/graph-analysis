@@ -152,7 +152,7 @@
                   openMenu(e, app, { toCopy: comm.comm.join('\n') })}
               >
                 <span
-                  class="top-row 
+                  class="top-row
                   {comm.comm.includes(currNode) ? 'currComm' : ''}"
                 >
                   <span>
@@ -166,12 +166,14 @@
                 {#each comm.comm as member}
                   <div
                     class="
-                    {NODE} 
+                    {NODE}
                     {classLinked(resolvedLinks, comm.label, member)}
-                    {classResolved(app, member)} 
+                    {classResolved(app, member)}
                     {classExt(member)}
                       "
-                    on:click={async (e) => await openOrSwitch(app, member, e)}
+                    on:mousedown={async (e) => {
+                      if (e.button === 0 || e.button === 1) await openOrSwitch(app, member, e)
+                    }}
                     on:mouseover={(e) => hoverPreview(e, view, member)}
                   >
                     {#if isLinked(resolvedLinks, comm.label, member, false)}
@@ -225,8 +227,8 @@
   }
   /* .GA-CC {
         border: 1px solid var(--background-modifier-border);
-        border-radius: 3px; 
-        padding: 5px; 
+        border-radius: 3px;
+        padding: 5px;
       } */
 
   .GA-details {

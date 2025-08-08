@@ -189,7 +189,9 @@
               class="
                 {node.linked ? LINKED : NOT_LINKED}
               {classExt(node.to)}"
-              on:click={async (e) => await openOrSwitch(app, node.to, e)}
+              on:mousedown={async (e) => {
+                if (e.button === 0 || e.button === 1) await openOrSwitch(app, node.to, e)
+              }}
             >
               <!-- svelte-ignore a11y-mouse-events-have-key-events -->
               <!-- svelte-ignore a11y-no-static-element-interactions -->
