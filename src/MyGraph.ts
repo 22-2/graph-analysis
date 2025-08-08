@@ -186,18 +186,18 @@ export default class MyGraph extends Graph {
       return results
     },
 
-    // 'Common Neighbours': async (a: string): Promise<ResultMap> => {
-    //   const Na = this.neighbors(a)
-    //   const results: ResultMap = {}
+    'Common Neighbours': async (a: string): Promise<ResultMap> => {
+      const Na = this.neighbors(a)
+      const results: ResultMap = {}
 
-    //   this.forEachNode((to) => {
-    //     const Nb = this.neighbors(to)
-    //     const Nab = intersection(Na, Nb)
-    //     const measure = Nab.length
-    //     results[to] = { measure, extra: Nab }
-    //   })
-    //   return results
-    // },
+      this.forEachNode((to) => {
+        const Nb = this.neighbors(to)
+        const Nab = intersection(Na, Nb)
+        const measure = Nab.length
+        results[to] = { measure, extra: Nab }
+      })
+      return results
+    },
 
     'Co-Citations': async (a: string): Promise<CoCitationMap> => {
       const mdCache = this.app.metadataCache
@@ -691,29 +691,29 @@ export default class MyGraph extends Graph {
       return results
     },
 
-    // Tversky: async (a: string): Promise<ResultMap> => {
-    //   const results: ResultMap = {}
-    //   const nlp = getNLPPlugin(this.app)
-    //   if (!nlp) return results
+    Tversky: async (a: string): Promise<ResultMap> => {
+      const results: ResultMap = {}
+      const nlp = getNLPPlugin(this.app)
+      if (!nlp) return results
 
-    //   const { Docs } = nlp
-    //   const sourceSet = nlp.getNoStopSet(Docs[a])
+      const { Docs } = nlp
+      const sourceSet = nlp.getNoStopSet(Docs[a])
 
-    //   this.forEachNode(async (to: string) => {
-    //     const targetDoc = Docs[to]
-    //     if (!targetDoc) {
-    //       results[to] = { measure: 0, extra: [] }
-    //     }
-    //     const targetSet = nlp.getNoStopSet(Docs[to])
+      this.forEachNode(async (to: string) => {
+        const targetDoc = Docs[to]
+        if (!targetDoc) {
+          results[to] = { measure: 0, extra: [] }
+        }
+        const targetSet = nlp.getNoStopSet(Docs[to])
 
-    //     const measure = similarity.set.tversky(sourceSet, targetSet)
-    //     results[to] = {
-    //       measure,
-    //       extra: [],
-    //     }
-    //   })
-    //   return results
-    // },
+        const measure = similarity.set.tversky(sourceSet, targetSet)
+        results[to] = {
+          measure,
+          extra: [],
+        }
+      })
+      return results
+    },
 
     'Otsuka-Chiai': async (a: string): Promise<ResultMap> => {
       const results: ResultMap = {}

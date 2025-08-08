@@ -29,8 +29,8 @@
 
 {#if currSubtype === 'Adamic Adar'}
   <TableComponent {...props} />
-<!-- {:else if currSubtype === 'Common Neighbours'}
-  <TableComponent {...props} /> -->
+{:else if currSubtype === 'Common Neighbours'}
+  <TableComponent {...props} />
 {:else if currSubtype === 'Jaccard'}
   <TableComponent {...props} />
 {:else if currSubtype === 'Co-Citations'}
@@ -45,8 +45,8 @@
   <TableComponent {...props} />
 {:else if currSubtype === 'Otsuka-Chiai'}
   <TableComponent {...props} />
-  <!-- {:else if currSubtype === 'Tversky'}
-  <TableComponent {...props} /> -->
+{:else if currSubtype === 'Tversky'}
+  <TableComponent {...props} />
 {:else if currSubtype === 'Sentiment'}
   <TableComponent {...props} />
 {:else if currSubtype === 'Louvain'}

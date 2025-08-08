@@ -28,7 +28,7 @@ export type Analyses =
 export type Subtype =
   | 'HITS'
   | 'Adamic Adar'
-  // | 'Common Neighbours'
+  | 'Common Neighbours'
   | 'Jaccard'
   | 'Co-Citations'
   | 'Label Propagation'
@@ -36,7 +36,7 @@ export type Subtype =
   | 'Overlap'
   | 'Clustering Coefficient'
   | 'BoW'
-  // | 'Tversky'
+  | 'Tversky'
   | 'Otsuka-Chiai'
   | 'Sentiment'
 
