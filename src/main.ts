@@ -75,7 +75,28 @@ export default class GraphAnalysisPlugin extends Plugin {
       }
 
       await this.refreshGraph()
-      await openView(this.app, VIEW_TYPE_GRAPH_ANALYSIS, AnalysisView)
+
+      const leaves = this.app.workspace.getLeavesOfType(
+        VIEW_TYPE_GRAPH_ANALYSIS
+      )
+
+      if (leaves.length > 0) {
+        // If a Graph Analysis view is already open, refresh its content.
+        // This handles the case where Obsidian starts with the view already open from a previous session.
+        for (const leaf of leaves) {
+          const view = leaf.view as AnalysisView
+          if (view?.draw) {
+            // Re-draw the view with the latest graph data.
+            await view.draw(
+              view.currSubtype ?? this.settings.defaultSubtypeType
+            )
+          }
+        }
+      } else {
+        // If no view is open, open a new one.
+        // The `onOpen` method of the view will handle the initial drawing.
+        await openView(this.app, VIEW_TYPE_GRAPH_ANALYSIS, AnalysisView)
+      }
     })
   }
 
