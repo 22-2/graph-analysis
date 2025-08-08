@@ -1,7 +1,14 @@
-import { App, Notice, PluginSettingTab, Setting } from 'obsidian'
-import { ANALYSIS_TYPES } from 'src/Constants'
+import {
+  App,
+  Notice,
+  PluginSettingTab,
+  Setting,
+  createFragment,
+} from 'obsidian'
+import { ANALYSIS_TYPES, VIEW_TYPE_GRAPH_ANALYSIS } from 'src/Constants'
 import type { Subtype } from 'src/Interfaces'
 import type GraphAnalysisPlugin from 'src/main'
+import AnalysisView from './AnalysisView'
 import Checkboxes from './Components/Checkboxes.svelte'
 
 export class SampleSettingTab extends PluginSettingTab {
@@ -18,6 +25,27 @@ export class SampleSettingTab extends PluginSettingTab {
     const { settings } = plugin
 
     containerEl.empty()
+
+    const restartView = async () => {
+      const leaves = plugin.app.workspace.getLeavesOfType(
+        VIEW_TYPE_GRAPH_ANALYSIS
+      )
+      for (const leaf of leaves) {
+        const view = leaf.view as AnalysisView
+        if (view) {
+          // By setting the state, we trigger the view's setState method, forcing a reload.
+          await leaf.setViewState({
+            type: VIEW_TYPE_GRAPH_ANALYSIS,
+            state: view.getState(),
+          })
+        }
+      }
+    }
+
+    const refreshGraphAndRestartView = async () => {
+      await plugin.refreshGraph()
+      await restartView()
+    }
 
     containerEl.createEl('h3', { text: 'Analysis Defaults' })
 
@@ -53,6 +81,7 @@ export class SampleSettingTab extends PluginSettingTab {
         toggle.setValue(settings.noInfinity).onChange(async (value) => {
           settings.noInfinity = value
           await plugin.saveSettings()
+          await restartView()
         })
       )
 
@@ -63,6 +92,7 @@ export class SampleSettingTab extends PluginSettingTab {
         toggle.setValue(settings.noZero).onChange(async (value) => {
           settings.noZero = value
           await plugin.saveSettings()
+          await restartView()
         })
       )
 
@@ -75,6 +105,7 @@ export class SampleSettingTab extends PluginSettingTab {
         toggle.setValue(settings.allFileExtensions).onChange(async (value) => {
           settings.allFileExtensions = value
           await plugin.saveSettings()
+          await refreshGraphAndRestartView()
         })
       )
 
@@ -87,6 +118,7 @@ export class SampleSettingTab extends PluginSettingTab {
         toggle.setValue(settings.showImgThumbnails).onChange(async (value) => {
           settings.showImgThumbnails = value
           await plugin.saveSettings()
+          await restartView()
         })
       )
 
@@ -99,6 +131,7 @@ export class SampleSettingTab extends PluginSettingTab {
         toggle.setValue(settings.coTags).onChange(async (value) => {
           settings.coTags = value
           await plugin.saveSettings()
+          await restartView()
         })
       )
 
@@ -111,6 +144,7 @@ export class SampleSettingTab extends PluginSettingTab {
         toggle.setValue(settings.excludeLinked).onChange(async (value) => {
           settings.excludeLinked = value
           await plugin.saveSettings()
+          await restartView()
         })
       )
 
@@ -121,6 +155,7 @@ export class SampleSettingTab extends PluginSettingTab {
         toggle.setValue(settings.addUnresolved).onChange(async (value) => {
           settings.addUnresolved = value
           await plugin.saveSettings()
+          await refreshGraphAndRestartView()
         })
       )
 
@@ -140,6 +175,7 @@ export class SampleSettingTab extends PluginSettingTab {
           }
           settings.exclusionTags = splits
           await plugin.saveSettings()
+          await refreshGraphAndRestartView()
         }
       })
 
@@ -173,7 +209,7 @@ export class SampleSettingTab extends PluginSettingTab {
             new RegExp(value)
             settings.exclusionRegex = value
             await plugin.saveSettings()
-            await this.plugin.refreshGraph()
+            await refreshGraphAndRestartView()
           } catch (e) {
             // Invalid regex
             new Notice(

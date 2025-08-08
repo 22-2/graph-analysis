@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf } from 'obsidian'
+import { ItemView, ViewStateResult, WorkspaceLeaf } from 'obsidian'
 import { VIEW_TYPE_GRAPH_ANALYSIS } from 'src/Constants'
 import type { Subtype } from 'src/Interfaces'
 import type GraphAnalysisPlugin from 'src/main'
@@ -38,10 +38,26 @@ export default class AnalysisView extends ItemView {
   }
 
   onClose(): Promise<void> {
+    this.component?.$destroy()
     return Promise.resolve()
   }
 
+  getState(): any {
+    const state = super.getState()
+    state.currSubtype = this.currSubtype
+    return state
+  }
+
+  async setState(state: any, result: ViewStateResult): Promise<void> {
+    this.currSubtype =
+      state.currSubtype ?? this.plugin.settings.defaultSubtypeType
+    await this.draw(this.currSubtype)
+    return super.setState(state, result)
+  }
+
   async draw(currSubtype: Subtype): Promise<void> {
+    this.currSubtype = currSubtype
+
     const { app, contentEl } = this
     const { settings } = this.plugin
 
