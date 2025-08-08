@@ -14,6 +14,7 @@ export type SubtypeInfo = {
   desc: string
   anl: Analyses
   nlp: boolean
+  shortDesc: string
 }
 
 export type Analyses =

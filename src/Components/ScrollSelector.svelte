@@ -15,10 +15,14 @@
 
 {#if view.plugin.settings.algsToShow.length > 1}
   <div class="selector-container">
-    <select class="dropdown" bind:value={currSubtype} on:change={handleSelectionChange}>
+    <select
+      class="dropdown"
+      bind:value={currSubtype}
+      on:change={handleSelectionChange}
+    >
       {#each ANALYSIS_TYPES as sub}
         {#if view.plugin.settings.algsToShow.includes(sub.subtype)}
-          <option value={sub.subtype}>
+          <option value={sub.subtype} title={sub.shortDesc}>
             {#if sub.global}🌍 {/if}{#if sub.nlp}💬 {/if}{sub.subtype}
           </option>
         {/if}

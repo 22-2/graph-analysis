@@ -41,6 +41,7 @@ export const ANALYSIS_TYPES: SubtypeInfo[] = [
     desc: 'See which of your notes are referenced together most often.',
     global: false,
     nlp: false,
+    shortDesc: '共に引用されるノートを発見します。',
   },
   {
     anl: 'Centrality',
@@ -48,6 +49,7 @@ export const ANALYSIS_TYPES: SubtypeInfo[] = [
     desc: 'An authority has lots of links coming in\nA hub has lots of links going out.',
     global: true,
     nlp: false,
+    shortDesc: '情報の「ハブ」と「権威」を特定します。',
   },
   {
     anl: 'Link Prediction',
@@ -55,6 +57,7 @@ export const ANALYSIS_TYPES: SubtypeInfo[] = [
     desc: 'Based on the structure of your graph, this alg predicts which notes _should_ be linked to the current note.',
     global: false,
     nlp: false,
+    shortDesc: '共通の隣人に基づき、リンクされるべきノートを予測します。',
   },
   // {
   //   anl: 'Link Prediction',
@@ -70,6 +73,7 @@ export const ANALYSIS_TYPES: SubtypeInfo[] = [
     desc: "Based on the structure of your graph, this alg predicts which notes are most similar to the current note.\n\nIt shows the ratio of the numbers of neighbours two notes have in common, to the total number of neighbours they each have.\n\n'🔗' means that this note is linked to the group name.",
     global: false,
     nlp: false,
+    shortDesc: 'リンク構造に基づいて類似ノートを検索します。',
   },
   {
     anl: 'Similarity',
@@ -77,6 +81,7 @@ export const ANALYSIS_TYPES: SubtypeInfo[] = [
     desc: '<No description given yet>',
     global: false,
     nlp: false,
+    shortDesc: 'Jaccardに似た類似度計算（分母が小さい方のノートの隣接数）。',
   },
 
   {
@@ -85,6 +90,7 @@ export const ANALYSIS_TYPES: SubtypeInfo[] = [
     desc: "Start by giving each node a unique label (its own name). Then, look at each node's neighbours, and change it's label to the most common among it's neighbours. Repeat this process `iterations` number of times. Show the nodes grouped by the last label they had.\n\n'🔗' means that this note is linked to the group name.",
     global: true,
     nlp: false,
+    shortDesc: 'ノートの自然なグループ（コミュニティ）を発見します。',
   },
   {
     anl: 'Community Detection',
@@ -92,6 +98,7 @@ export const ANALYSIS_TYPES: SubtypeInfo[] = [
     desc: "Show the Louvain community that the current note is in.\n\n'🔗' means that this note is linked to the group name.",
     global: false,
     nlp: false,
+    shortDesc: 'モジュラリティを最大化してコミュニティを検出します。',
   },
   {
     anl: 'Community Detection',
@@ -99,6 +106,7 @@ export const ANALYSIS_TYPES: SubtypeInfo[] = [
     desc: 'Gives the likelihood that a nodes _neighbours_ are connected to each other.',
     global: true,
     nlp: false,
+    shortDesc: 'ノート周辺の接続の密さを測定します。',
   },
   {
     anl: 'NLP',
@@ -106,6 +114,7 @@ export const ANALYSIS_TYPES: SubtypeInfo[] = [
     desc: 'Split a note into its words, count how many times each word appears, and use that to compare similarity between notes.',
     global: false,
     nlp: true,
+    shortDesc: '単語の出現頻度で内容の類似性を比較します。',
   },
   // {
   //   anl: 'NLP',
@@ -120,6 +129,7 @@ export const ANALYSIS_TYPES: SubtypeInfo[] = [
     desc: 'Returns the "Otsuka-Chiai" similarity between the current note and every other note.',
     global: false,
     nlp: true,
+    shortDesc: 'テキスト内容の類似度を計算します。',
   },
   {
     anl: 'NLP',
@@ -127,6 +137,7 @@ export const ANALYSIS_TYPES: SubtypeInfo[] = [
     desc: 'Gives the sentiment of every note. Positive → higher sentiment.',
     global: true,
     nlp: true,
+    shortDesc: 'テキストの感情（ポジティブ/ネガティブ）を分析します。',
   },
 ]
 
