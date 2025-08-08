@@ -1,6 +1,6 @@
 {
-	"id": "graph-analysis",
-	"name": "Graph Analysis",
+	"id": "graph-analysis-ex",
+	"name": "Graph Analysis Ex",
 	"version": "0.15.4",
 	"minAppVersion": "0.12.10",
 	"description": "Analyse your Obsidian graph.",
