@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { App } from 'obsidian'
+  import { MarkdownView } from 'obsidian'
   import type AnalysisView from 'src/AnalysisView'
   import {
     ANALYSIS_TYPES,
@@ -24,20 +25,20 @@
     getImgBufferPromise,
     hoverPreview,
     isImg,
-    jumpToSelection,
     looserIsLinked,
     openMenu,
     openOrSwitch,
     presentPath,
     roundNumber,
   } from 'src/Utility'
-  import { onMount } from 'svelte'
+  import { onDestroy, onMount } from 'svelte'
   import FaLink from 'svelte-icons/fa/FaLink.svelte'
   import InfiniteScroll from 'svelte-infinite-scroll'
   import ExtensionIcon from './ExtensionIcon.svelte'
   import ImgThumbnail from './ImgThumbnail.svelte'
-  import SubtypeOptions from './SubtypeOptions.svelte'
   import RenderedMarkdown from './RenderedMarkdown.svelte'
+  import SubtypeOptions from './SubtypeOptions.svelte'
+  import debounce from 'lodash.debounce'
 
   export let app: App
   export let plugin: GraphAnalysisPlugin
@@ -58,7 +59,6 @@
   let frozen = false
   let size = 50
 
-  let currNode: string
   let current_component: HTMLElement
   let newBatch: CoCiteComp[] = []
   let visibleData: CoCiteComp[] = []
@@ -67,17 +67,6 @@
 
   let currFile = app.workspace.getActiveFile()
   $: currNode = currFile?.path
-  app.workspace.on('active-leaf-change', () => {
-    if (!frozen) {
-      blockSwitch = true
-      newBatch = []
-      visibleData = []
-      promiseSortedResults = null
-      page = 0
-
-      setTimeout(() => (currFile = app.workspace.getActiveFile()), 100)
-    }
-  })
 
   let ascOrder = false
   $: promiseSortedResults =
@@ -88,8 +77,7 @@
           Object.values(ccMap).forEach((value: CoCitationRes) => {
             value.coCitations = value.coCitations.sort((a, b) => {
               return a.measure > b.measure ? -1 : 1
-              },
-            )
+            })
           })
           const greater = ascOrder ? 1 : -1
           const lesser = ascOrder ? -1 : 1
@@ -109,11 +97,14 @@
             }
           })
           sortedCites.sort((a, b) => {
-            return a.measure > b.measure ? greater :
-                a.measure !== b.measure ||
-                presentPath(a.to).toLowerCase() > presentPath(b.to).toLowerCase() ? lesser : greater
-            }
-          )
+            return a.measure > b.measure
+              ? greater
+              : a.measure !== b.measure ||
+              presentPath(a.to).toLowerCase() >
+              presentPath(b.to).toLowerCase()
+                ? lesser
+                : greater
+          })
           return sortedCites
         })
         .then((res) => {
@@ -127,9 +118,57 @@
 
   $: visibleData = [...visibleData, ...newBatch]
 
+  const onMetadataChange = async () => {
+    if (!frozen) {
+      blockSwitch = true
+      newBatch = []
+      visibleData = []
+      promiseSortedResults = null
+      page = 0
+      setTimeout(() => (currFile = app.workspace.getActiveFile()), 100)
+      await plugin.refreshGraph()
+      await view.draw(currSubtypeInfo!.subtype)
+    }
+    console.count('coci change')
+  }
+
+  const onLeafChange = () => {
+    const view = app.workspace.getActiveViewOfType(MarkdownView)
+
+    if (!view) {
+      return
+    }
+
+    const pathEq = view.file?.path === currFile?.path
+    if (pathEq) {
+      return
+    }
+
+    if (!frozen) {
+      blockSwitch = true
+      newBatch = []
+      visibleData = []
+      promiseSortedResults = null
+      page = 0
+      setTimeout(() => (currFile = app.workspace.getActiveFile()), 100)
+    }
+    console.count('coci leaf change')
+  }
+  const debounced = debounce(onMetadataChange, 1000)
+  app.workspace.off('active-leaf-change', onLeafChange)
+  app.metadataCache.off('changed', debounced)
+  plugin.registerEvent(app.workspace.on('active-leaf-change', onLeafChange))
+  plugin.registerEvent(app.metadataCache.on('changed', debounced))
+
   onMount(() => {
+    // console.log("cc.mounted")
     currFile = app.workspace.getActiveFile()
+    plugin.registerEvent(app.metadataCache.on('changed', debounced))
     debug(settings, { promiseSortedResults })
+  })
+  onDestroy(() => {
+    app.metadataCache.off('changed', debounced)
+    app.workspace.off('active-leaf-change', onLeafChange)
   })
 </script>
 
@@ -219,7 +258,7 @@
                     <RenderedMarkdown
                       sentence={coCite.sentence}
                       sourcePath={coCite.source}
-                      app={app}
+                      {app}
                       line={coCite.line}
                     />
                   {/each}
@@ -255,8 +294,8 @@
 
   /* .GA-CC {
     border: 1px solid var(--background-modifier-border);
-    border-radius: 3px; 
-    padding: 5px; 
+    border-radius: 3px;
+    padding: 5px;
   } */
 
   .is-unresolved {
@@ -293,10 +332,7 @@
     font-weight: 600;
   }
 
-
   .top-row > span + span {
     float: right;
   }
-
-
 </style>

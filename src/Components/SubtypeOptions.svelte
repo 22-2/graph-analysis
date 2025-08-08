@@ -6,13 +6,13 @@
   import FaCreativeCommonsZero from 'svelte-icons/fa/FaCreativeCommonsZero.svelte'
   import FaFire from 'svelte-icons/fa/FaFire.svelte'
   import FaRegSnowflake from 'svelte-icons/fa/FaRegSnowflake.svelte'
+  import GoSignIn from 'svelte-icons/go/GoSignIn.svelte'
+  import GoSignOut from 'svelte-icons/go/GoSignOut.svelte'
   import IoIosTrendingDown from 'svelte-icons/io/IoIosTrendingDown.svelte'
   import IoIosTrendingUp from 'svelte-icons/io/IoIosTrendingUp.svelte'
   import IoMdRefresh from 'svelte-icons/io/IoMdRefresh.svelte'
   import MdExposureZero from 'svelte-icons/md/MdExposureZero.svelte'
   import InfoIcon from './InfoIcon.svelte'
-  import GoSignOut from 'svelte-icons/go/GoSignOut.svelte'
-  import GoSignIn from 'svelte-icons/go/GoSignIn.svelte'
 
   export let currSubtypeInfo: SubtypeInfo
   export let noZero: boolean = undefined
@@ -82,6 +82,7 @@
     </span>
   {/if}
   {#if frozen !== undefined}
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
     <span
       class="GA-Option-span"
       aria-label={frozen ? `Frozen on: ${currFile.basename}` : 'Unfrozen'}
@@ -115,6 +116,7 @@
     </span>
   {/if}
   {#if sortBy !== undefined}
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
     <span
       class="GA-Option-span"
       aria-label="Sort By: {sortBy ? 'Authority' : 'Hub'}"
@@ -138,6 +140,7 @@
       </span>
     </span>
   {/if}
+  <!-- svelte-ignore a11y-click-events-have-key-events -->
   <span
     class="GA-Option-span"
     aria-label="Refresh Index"
