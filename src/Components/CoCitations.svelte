@@ -194,7 +194,7 @@
               <!-- svelte-ignore a11y-mouse-events-have-key-events -->
               <!-- svelte-ignore a11y-no-static-element-interactions -->
               <span
-                on:contextmenu={(e) => openMenu(e, app)}
+                on:contextmenu={(e) => openMenu(e, app, { nodePath: node.to })}
                 on:mouseover={(e) => hoverPreview(e, view, dropPath(node.to))}
               >
                 {#if node.linked}
