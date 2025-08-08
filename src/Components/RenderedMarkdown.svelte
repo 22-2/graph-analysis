@@ -1,11 +1,15 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { App, MarkdownRenderer } from 'obsidian'
+  // Component をインポート
+  import { App, MarkdownRenderer, Component } from 'obsidian'
+  import { jumpToSelection, openOrSwitch } from 'src/Utility'
+
   export let sentence: string[]
   export let sourcePath: string
   export let app: App
   export let line: number
-  import { jumpToSelection, openOrSwitch } from 'src/Utility'
+  // component プロパティを追加
+  export let component: Component
 
   let renderedSentence = sentence[0] + '==' + sentence[1] + '==' + sentence[2]
   if (sentence.length === 5) {
@@ -16,7 +20,8 @@
 
   let el: HTMLElement
   onMount(async () => {
-    MarkdownRenderer.renderMarkdown(renderedSentence, el, sourcePath, null)
+    // 第4引数に null の代わりに component を渡す
+    MarkdownRenderer.renderMarkdown(renderedSentence, el, sourcePath, component)
     for (let markedEl of el.getElementsByTagName('mark')) {
       markedEl.classList.add('CC-mark')
     }

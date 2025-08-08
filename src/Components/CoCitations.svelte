@@ -105,6 +105,9 @@
   $: visibleData = [...visibleData, ...newBatch]
 
   const onMetadataChange = async () => {
+    if (!current_component.checkVisibility()) {
+      return
+    }
     if (!frozen) {
       blockSwitch = true
       newBatch = []
@@ -146,6 +149,9 @@
     currNode = currFile?.path
   })
   onDestroy(() => {
+    newBatch = []
+    visibleData = []
+    promiseSortedResults = null
     currNode = undefined
     app.metadataCache.off('changed', debounced)
     app.workspace.off('active-leaf-change', onLeafChange)
@@ -232,6 +238,7 @@
                       sentence={citation.sentence}
                       sourcePath={citation.source}
                       line={citation.line}
+                      component={view}
                     />
                   {/each}
                 </div>

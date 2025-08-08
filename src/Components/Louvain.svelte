@@ -84,6 +84,9 @@
   $: visibleData = [...visibleData, ...newBatch]
 
   const onMetadataChange = async () => {
+    if (!current_component.checkVisibility()) {
+      return
+    }
     if (!frozen) {
       blockSwitch = true
       newBatch = []
@@ -131,6 +134,9 @@
     currFile = app.workspace.getActiveFile()
   })
   onDestroy(() => {
+    newBatch = []
+    visibleData = []
+    promiseSortedResults = null
     currNode = undefined
     app.metadataCache.off('changed', debounced)
     app.workspace.off('active-leaf-change', onLeafChange)
