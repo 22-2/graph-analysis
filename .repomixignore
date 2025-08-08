@@ -1,0 +1,17 @@
+# Add patterns to ignore here, one per line
+# Example:
+# *.log
+# tmp/
+.github
+.gitignore
+.prettierrc
+.repomixignore
+.vscode
+*.js
+*.json
+bun.lockb
+CHANGELOG.md
+LICENSE
+pnpm-lock.yaml
+README.md
+yarn.lock

@@ -4,6 +4,7 @@
   "description": "Analyse your Obsidian graph",
   "main": "main.js",
   "scripts": {
+    "repomix": "repomix && repomix-output.md",
     "dev": "rollup --config rollup.config.js -w",
     "build": "rollup --config rollup.config.js --environment BUILD:production",
     "release": "standard-version"
