@@ -4,15 +4,15 @@
   "compilerOptions": {
     "baseUrl": ".",
     // "inlineSourceMap": true,
-    "inlineSources": true,
-    "module": "ESNext",
+    // "inlineSources": true,
+    "module": "nodenext",
     "target": "es6",
     "allowJs": true,
     "checkJs": false,
     "noImplicitAny": true,
-    "moduleResolution": "node",
+    "moduleResolution": "nodenext",
     "importHelpers": true,
-    "lib": ["dom", "es5", "scripthost", "es2019"],
+    "lib": ["dom", "ESNext"],
     "types": ["node", "svelte"],
     "paths": {
       "src": ["src/*"]
