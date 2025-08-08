@@ -5,6 +5,10 @@ span.internal-link {
   text-decoration-line: none !important;
 }
 
+span.internal-link:not(.is-unresolved) {
+  cursor: pointer;
+}
+
 td.internal-link:hover,
 div.internal-link:hover,
 span.internal-link:hover {
