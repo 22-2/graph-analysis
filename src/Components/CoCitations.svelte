@@ -1,10 +1,15 @@
 <script lang="ts">
   import type { App } from 'obsidian'
   import { MarkdownView } from 'obsidian'
-  import { hoverPreview, isInVault, isLinked } from 'obsidian-community-lib'
+  import { hoverPreview, isLinked } from 'obsidian-community-lib'
   import type AnalysisView from 'src/AnalysisView'
-  import { ANALYSIS_TYPES, ICON, LINKED, NOT_LINKED } from 'src/Constants'
-  import type { GraphAnalysisSettings, Subtype } from 'src/Interfaces'
+  import { ANALYSIS_TYPES, ICON, MEASURE, NODE } from 'src/Constants'
+  import type {
+    CoCitation,
+    CoCitationMap,
+    GraphAnalysisSettings,
+    Subtype,
+  } from 'src/Interfaces'
   import type GraphAnalysisPlugin from 'src/main'
   import {
     classExt,
@@ -22,6 +27,7 @@
   import ImgThumbnail from './ImgThumbnail.svelte'
   import SubtypeOptions from './SubtypeOptions.svelte'
   import debounce from 'lodash.debounce'
+  import RenderedMarkdown from './RenderedMarkdown.svelte'
 
   export let app: App
   export let plugin: GraphAnalysisPlugin
@@ -30,23 +36,26 @@
   export let currSubtype: Subtype
 
   $: currSubtypeInfo = ANALYSIS_TYPES.find((sub) => sub.subtype === currSubtype)
-  let frozen = false
-  let currFile = app.workspace.getActiveFile()
-  let excludeLinked = settings.excludeLinked
 
-  let resolution = 10
-  interface ComponentResults {
-    linked: boolean
+  let frozen = false
+  let ascOrder = false
+  let excludeLinked = settings.excludeLinked
+  let currFile = app.workspace.getActiveFile()
+
+  interface ComponentResult {
     to: string
+    measure: number
     resolved: boolean
+    coCitations: CoCitation[]
+    linked: boolean
     img: Promise<ArrayBuffer> | null
   }
 
   $: currNode = currFile?.path
   let size = 50
   let current_component: HTMLElement
-  let newBatch: ComponentResults[] = []
-  let visibleData: ComponentResults[] = []
+  let newBatch: ComponentResult[] = []
+  let visibleData: ComponentResult[] = []
   let page = 0
   let blockSwitch = false
 
@@ -55,25 +64,34 @@
   $: promiseSortedResults =
     !plugin.g || !currNode
       ? null
-      : plugin.g.algs['Louvain'](currNode, { resolution })
-          .then((results: string[]) => {
-            const componentResults: ComponentResults[] = []
-            results.forEach((to) => {
-              const resolved = !to.endsWith('.md') || isInVault(app, to)
+      : plugin.g.algs['Co-Citations'](currNode)
+          .then((results: CoCitationMap) => {
+            const componentResults: ComponentResult[] = []
+            const greater = ascOrder ? 1 : -1
+            const lesser = ascOrder ? -1 : 1
+
+            for (const to in results) {
+              const result = results[to]
               const linked = isLinked(resolvedLinks, currNode, to, false)
               if (!(excludeLinked && linked)) {
-                const img =
-                  plugin.settings.showImgThumbnails && isImg(to)
-                    ? getImgBufferPromise(app, to)
-                    : null
                 componentResults.push({
-                  linked,
                   to,
-                  resolved,
-                  img,
+                  measure: result.measure,
+                  resolved: result.resolved,
+                  coCitations: result.coCitations.sort(
+                    (a, b) => b.measure - a.measure
+                  ),
+                  linked,
+                  img:
+                    plugin.settings.showImgThumbnails && isImg(to)
+                      ? getImgBufferPromise(app, to)
+                      : null,
                 })
               }
-            })
+            }
+            componentResults.sort((a, b) =>
+              a.measure > b.measure ? greater : lesser
+            )
             return componentResults
           })
           .then((res) => {
@@ -97,20 +115,14 @@
       await plugin.refreshGraph()
       await view.draw(currSubtypeInfo!.subtype)
     }
-    console.count('louvain change')
+    console.count('cocitations change')
   }
 
   const onLeafChange = () => {
     const view = app.workspace.getActiveViewOfType(MarkdownView)
-
-    if (!view) {
-      return
-    }
-
+    if (!view) return
     const pathEq = view.file?.path === currFile?.path
-    if (pathEq) {
-      return
-    }
+    if (pathEq) return
 
     if (!frozen) {
       blockSwitch = true
@@ -120,7 +132,7 @@
       page = 0
       setTimeout(() => (currFile = app.workspace.getActiveFile()), 100)
     }
-    console.count('louvain leaf change')
+    console.count('cocitations leaf change')
   }
 
   const debounced = debounce(onMetadataChange, 1000)
@@ -130,8 +142,8 @@
   plugin.registerEvent(app.metadataCache.on('changed', debounced))
 
   onMount(() => {
-    currNode = currFile?.path
     currFile = app.workspace.getActiveFile()
+    currNode = currFile?.path
   })
   onDestroy(() => {
     currNode = undefined
@@ -142,6 +154,7 @@
 
 <SubtypeOptions
   bind:currSubtypeInfo
+  bind:ascOrder
   bind:currFile
   bind:frozen
   bind:excludeLinked
@@ -155,67 +168,74 @@
   bind:page
 />
 
-<label for="resolution">Resolution: </label>
-<input
-  name="resolution"
-  type="range"
-  min="1"
-  max="20"
-  value={resolution}
-  on:change={(e) => {
-    const value = Number.parseInt(e.target.value)
-
-    if (!frozen) {
-      blockSwitch = true
-      newBatch = []
-      visibleData = []
-      promiseSortedResults = null
-      page = 0
-    }
-    console.log({ value })
-    resolution = value
-  }}
-/>
-
-<div class="GA-Results" bind:this={current_component}>
+<div class="GA-CCs" bind:this={current_component}>
   {#if promiseSortedResults}
     {#await promiseSortedResults then sortedResults}
       {#key sortedResults}
         {#each visibleData as node}
-          {#if node.to !== currNode && node !== undefined}
-            <!-- svelte-ignore a11y-click-events-have-key-events -->
-            <!-- svelte-ignore a11y-no-static-element-interactions -->
-            <div
-              class="
-                {node.linked ? LINKED : NOT_LINKED}
-              {classExt(node.to)}"
-              on:mousedown={async (e) => {
-                if (e.button === 0 || e.button === 1) await openOrSwitch(app, node.to, e)
-              }}
-            >
-              <!-- svelte-ignore a11y-mouse-events-have-key-events -->
-              <!-- svelte-ignore a11y-no-static-element-interactions -->
-              <span
-                on:contextmenu={(e) => openMenu(e, app, { nodePath: node.to })}
-                on:mouseover={(e) => hoverPreview(e, view, dropPath(node.to))}
-              >
-                {#if node.linked}
-                  <span class={ICON}>
-                    <FaLink />
-                  </span>
-                {/if}
-
-                <ExtensionIcon path={node.to} />
-
-                <span
-                  class="internal-link {node.resolved ? '' : 'is-unresolved'}"
+          {#if node.to !== currNode && node !== undefined && node.measure > 0}
+            <div class="GA-CC">
+              <details class="tree-item-self">
+                <summary
+                  class="tree-item-inner"
+                  on:contextmenu={(e) => openMenu(e, app, { nodePath: node.to })}
                 >
-                  {presentPath(node.to)}
-                </span>
-                {#if isImg(node.to)}
-                  <ImgThumbnail img={node.img} />
-                {/if}
-              </span>
+                  <span class="top-row">
+                    <!-- svelte-ignore a11y-mouse-events-have-key-events -->
+                    <!-- svelte-ignore a11y-no-static-element-interactions -->
+                    <span
+                      on:mousedown={async (e) => {
+                        if (e.button === 0 || e.button === 1)
+                          await openOrSwitch(app, node.to, e)
+                      }}
+                      on:mouseover={(e) => hoverPreview(e, view, dropPath(node.to))}
+                    >
+                      {#if node.linked}
+                        <span class={ICON}><FaLink /></span>
+                      {/if}
+                      <ExtensionIcon path={node.to} />
+                      <span
+                        class="internal-link {node.resolved
+                          ? ''
+                          : 'is-unresolved'}"
+                      >
+                        {presentPath(node.to)}
+                      </span>
+                      {#if isImg(node.to)}
+                        <ImgThumbnail img={node.img} />
+                      {/if}
+                    </span>
+                    <span class={MEASURE}>{node.measure.toFixed(2)}</span>
+                  </span>
+                </summary>
+                <div class="GA-details">
+                  {#each node.coCitations as citation}
+                    <div class="CC-item">
+                      From:
+                      <!-- svelte-ignore a11y-mouse-events-have-key-events -->
+                      <!-- svelte-ignore a11y-no-static-element-interactions -->
+                      <span
+                        class="internal-link"
+                        on:mousedown={async (e) => {
+                          if (e.button === 0 || e.button === 1)
+                            await openOrSwitch(app, citation.source, e)
+                        }}
+                        on:mouseover={(e) =>
+                          hoverPreview(e, view, dropPath(citation.source))}
+                      >
+                        {presentPath(citation.source)}
+                      </span>
+                      ({citation.measure.toFixed(2)})
+                    </div>
+                    <RenderedMarkdown
+                      {app}
+                      sentence={citation.sentence}
+                      sourcePath={citation.source}
+                      line={citation.line}
+                    />
+                  {/each}
+                </div>
+              </details>
             </div>
           {/if}
         {/each}
@@ -239,14 +259,38 @@
 </div>
 
 <style>
-  .GA-Results > div {
-    padding: 0px 5px;
+  .GA-CCs {
+    display: flex;
+    flex-direction: column;
+    padding-left: 10px;
   }
   .is-unresolved {
     color: var(--text-muted);
   }
-
-  .GA-node {
-    overflow: hidden;
+  .GA-details {
+    padding-left: 20px;
+  }
+  .GA-node,
+  .CC-sentence {
+    font-size: var(--font-size-secondary);
+    border: 1px solid transparent;
+    border-radius: 5px;
+  }
+  .CC-item {
+    padding-left: 30px;
+    font-weight: 600;
+  }
+  .top-row span + span {
+    float: right;
+  }
+  span.GA-measure {
+    background-color: var(--background-secondary-alt);
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 12px;
+    line-height: 12px;
+  }
+  span.GA-measure:hover {
+    background-color: var(--interactive-accent);
   }
 </style>
