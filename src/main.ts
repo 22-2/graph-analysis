@@ -10,7 +10,7 @@ import {
 import type { GraphAnalysisSettings } from 'src/Interfaces'
 import MyGraph from 'src/MyGraph'
 import { SampleSettingTab } from 'src/Settings'
-import { debug } from './Utility'
+import { debug, getAlgorithmDisplayName } from './Utility'
 
 export default class GraphAnalysisPlugin extends Plugin {
   settings: GraphAnalysisSettings
@@ -53,7 +53,7 @@ export default class GraphAnalysisPlugin extends Plugin {
     ANALYSIS_TYPES.forEach((sub) => {
       this.addCommand({
         id: `open-${sub.subtype}`,
-        name: `Open ${sub.subtype}`,
+        name: `Open ${getAlgorithmDisplayName(sub.subtype, this.settings)}`,
         callback: async () => {
           const currView = await this.getCurrentView()
           await currView.draw(sub.subtype)

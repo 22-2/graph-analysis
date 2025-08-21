@@ -109,6 +109,7 @@ export interface GraphAnalysisSettings {
   exclusionRegex: string
   exclusionTags: string[]
   algsToShow: Subtype[]
+  algorithmRenames: { [key: string]: string }
 }
 
 export interface NLPPlugin {

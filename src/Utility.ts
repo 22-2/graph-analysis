@@ -556,3 +556,14 @@ export const _addLinkToMocRelateds = (
 
   return { success: true, newContent: lines.join('\n') }
 }
+
+export function getAlgorithmDisplayName(
+  subtype: Subtype,
+  settings: GraphAnalysisSettings
+): string {
+  const customName = settings.algorithmRenames?.[subtype]
+  if (customName && customName.trim() !== '') {
+    return `${customName} (${subtype})`
+  }
+  return subtype
+}

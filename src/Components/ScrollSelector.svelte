@@ -2,6 +2,7 @@
   import type AnalysisView from 'src/AnalysisView'
   import { ANALYSIS_TYPES } from 'src/Constants'
   import type { Subtype } from 'src/Interfaces'
+  import { getAlgorithmDisplayName } from 'src/Utility'
 
   export let currSubtype: Subtype
   export let view: AnalysisView
@@ -23,7 +24,10 @@
       {#each ANALYSIS_TYPES as sub}
         {#if view.plugin.settings.algsToShow.includes(sub.subtype)}
           <option value={sub.subtype} title={sub.shortDesc}>
-            {#if sub.global}🌍 {/if}{#if sub.nlp}💬 {/if}{sub.subtype}
+            {#if sub.global}🌍 {/if}{#if sub.nlp}💬 {/if}{getAlgorithmDisplayName(
+              sub.subtype,
+              view.plugin.settings
+            )}
           </option>
         {/if}
       {/each}

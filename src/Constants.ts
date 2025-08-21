@@ -21,6 +21,7 @@ export const DEFAULT_SETTINGS: GraphAnalysisSettings = {
     'Label Propagation',
     'Betweenness Centrality',
   ],
+  algorithmRenames: {},
 }
 
 export const DECIMALS = 4

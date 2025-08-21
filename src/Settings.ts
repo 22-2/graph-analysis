@@ -2,6 +2,7 @@ import { App, Notice, PluginSettingTab, Setting } from 'obsidian'
 import { ANALYSIS_TYPES, VIEW_TYPE_GRAPH_ANALYSIS } from 'src/Constants'
 import type { Subtype } from 'src/Interfaces'
 import type GraphAnalysisPlugin from 'src/main'
+import { getAlgorithmDisplayName } from 'src/Utility'
 import AnalysisView from './AnalysisView'
 import Checkboxes from './Components/Checkboxes.svelte'
 
@@ -48,9 +49,9 @@ export class SampleSettingTab extends PluginSettingTab {
       .setDesc('Which analysis type to show on startup')
       .addDropdown((dd) => {
         dd.setValue(settings.defaultSubtypeType)
-        const dict = {}
+        const dict: { [key: string]: string } = {}
         settings.algsToShow.forEach((subtype) => {
-          dict[subtype] = subtype
+          dict[subtype] = getAlgorithmDisplayName(subtype, settings)
         })
         dd.addOptions(dict).onChange(async (option) => {
           settings.defaultSubtypeType = option as Subtype
@@ -66,6 +67,37 @@ export class SampleSettingTab extends PluginSettingTab {
         plugin,
         settingName: 'algsToShow',
       },
+    })
+
+    containerEl.createEl('h3', { text: 'Algorithm Renaming' })
+    const desc = containerEl.createEl('p')
+    desc.appendText(
+      'Set custom names for algorithms. The new name will appear as "Custom Name (Original Name)".'
+    )
+    desc.createEl('br')
+    desc.appendText(
+      'Changes to names will require a reload of Obsidian to update in the command palette.'
+    )
+
+    ANALYSIS_TYPES.forEach((sub) => {
+      if (settings.algsToShow.includes(sub.subtype)) {
+        new Setting(containerEl).setName(sub.subtype).addText((text) => {
+          text
+            .setPlaceholder('Enter custom name...')
+            .setValue(settings.algorithmRenames[sub.subtype] || '')
+
+          text.inputEl.onblur = async () => {
+            const value = text.inputEl.value.trim()
+            if (value) {
+              settings.algorithmRenames[sub.subtype] = value
+            } else {
+              delete settings.algorithmRenames[sub.subtype]
+            }
+            await plugin.saveSettings()
+            restartView()
+          }
+        })
+      }
     })
 
     new Setting(containerEl)
