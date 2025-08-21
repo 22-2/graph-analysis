@@ -33,6 +33,7 @@ export type Subtype =
   | 'Label Propagation'
   | 'Louvain'
   | 'Overlap'
+  | 'PageRank'
   | 'Clustering Coefficient'
   | 'BoW'
   | 'Tversky'
@@ -45,6 +46,8 @@ export interface Communities {
 export interface ResultMap {
   [to: string]: { measure: number; extra: string[] }
 }
+
+type PagerankMapping = { [node: string]: number }
 
 export type HITSResult = {
   converged: boolean

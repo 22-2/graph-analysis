@@ -1,7 +1,8 @@
-// @ts-nocheck
+// @ts-check
 import Graph from 'graphology'
 import louvain from 'graphology-communities-louvain'
 import hits from 'graphology-metrics/centrality/hits'
+import pageRank from 'graphology-metrics/centrality/pagerank'
 
 import {
   App,
@@ -142,6 +143,18 @@ export default class MyGraph extends Graph {
         //  failed to converge.
         // 無いと収束しない
       })
+    },
+
+    PageRank: async (a: string): Promise<ResultMap> => {
+      const ranks = pageRank(this)
+      const results: ResultMap = {}
+      this.forEachNode((node) => {
+        results[node] = {
+          measure: ranks[node] ? roundNumber(ranks[node]) : 0,
+          extra: [],
+        }
+      })
+      return results
     },
 
     Overlap: async (a: string): Promise<ResultMap> => {
@@ -672,96 +685,6 @@ export default class MyGraph extends Graph {
       return results
     },
 
-    BoW: async (a: string): Promise<ResultMap> => {
-      const results: ResultMap = {}
-      const nlp = getNLPPlugin(this.app)
-      if (!nlp) return results
-
-      const { Docs } = nlp
-      const sourceBoW = nlp.getNoStopBoW(Docs[a])
-
-      this.forEachNode(async (to: string) => {
-        const targetDoc = Docs[to]
-        if (!targetDoc) {
-          results[to] = { measure: 0, extra: [] }
-        }
-        const targetBoW = nlp.getNoStopBoW(Docs[to])
-
-        const measure = similarity.bow.cosine(sourceBoW, targetBoW)
-        results[to] = {
-          measure,
-          extra: [],
-        }
-      })
-      return results
-    },
-
-    Tversky: async (a: string): Promise<ResultMap> => {
-      const results: ResultMap = {}
-      const nlp = getNLPPlugin(this.app)
-      if (!nlp) return results
-
-      const { Docs } = nlp
-      const sourceSet = nlp.getNoStopSet(Docs[a])
-
-      this.forEachNode(async (to: string) => {
-        const targetDoc = Docs[to]
-        if (!targetDoc) {
-          results[to] = { measure: 0, extra: [] }
-        }
-        const targetSet = nlp.getNoStopSet(Docs[to])
-
-        const measure = similarity.set.tversky(sourceSet, targetSet)
-        results[to] = {
-          measure,
-          extra: [],
-        }
-      })
-      return results
-    },
-
-    'Otsuka-Chiai': async (a: string): Promise<ResultMap> => {
-      const results: ResultMap = {}
-      const nlp = getNLPPlugin(this.app)
-      if (!nlp) return results
-
-      const { Docs } = nlp
-      const sourceSet = nlp.getNoStopSet(Docs[a])
-
-      this.forEachNode(async (to: string) => {
-        const targetDoc = Docs[to]
-        if (!targetDoc) {
-          results[to] = { measure: 0, extra: [] }
-        }
-        const targetSet = nlp.getNoStopSet(Docs[to])
-
-        const measure = similarity.set.oo(sourceSet, targetSet)
-        results[to] = {
-          measure,
-          extra: [],
-        }
-      })
-      return results
-    },
-
-    Sentiment: async (a: string): Promise<ResultMap> => {
-      const results: ResultMap = {}
-      const nlp = getNLPPlugin(this.app)
-      if (!nlp) return results
-
-      const { Docs } = nlp
-      this.forEachNode((node) => {
-        const doc = Docs[node]
-        if (!doc) {
-          results[node] = { measure: 0, extra: [] }
-          return
-        }
-        const measure = nlp.getAvgSentimentFromDoc(doc)
-        results[node] = { measure, extra: [] }
-      })
-      return results
-    },
-
     // 'Closeness': (a: string) => {
     //     const paths = graphlib.alg.dijkstra(this, a);
     //     const results: number[] = []
@@ -783,17 +706,4 @@ export default class MyGraph extends Graph {
     //     return results
     // },
   }
-}
-
-function getNLPPlugin(app: App): NLPPlugin | null {
-  const { nlp } = app.plugins.plugins
-  if (!nlp) {
-    new Notice(
-      'The NLP plugin must be installed & enabled to use the 💬 algorithms.'
-    )
-    return null
-  } else if (!nlp?.settings?.refreshDocsOnLoad) {
-    new Notice('In the NLP plugin, enable the setting "Refresh Docs on load".')
-    return null
-  } else return nlp
 }

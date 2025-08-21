@@ -52,6 +52,14 @@ export const ANALYSIS_TYPES: SubtypeInfo[] = [
     shortDesc: '情報の「ハブ」と「権威」を特定します。',
   },
   {
+    anl: 'Centrality',
+    subtype: 'PageRank',
+    desc: 'ノートの重要度を、リンクの数と質に基づいて評価します。多くの重要なノートからリンクされているノートは、より高いスコアを得ます。',
+    global: true,
+    nlp: false,
+    shortDesc: 'リンク構造に基づいてノートの重要度をランク付けします。',
+  },
+  {
     anl: 'Link Prediction',
     subtype: 'Adamic Adar',
     desc: 'グラフの構造に基づき、このアルゴリズムは現在のノートにリンクされるべきノートを予測します。',
