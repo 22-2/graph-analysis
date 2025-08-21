@@ -8,6 +8,7 @@
     "strict": true,
     "noEmit": true,
     "baseUrl": ".",
+    "verbatimModuleSyntax": false,
     "downlevelIteration": true,
     "resolveJsonModule": true,
     "lib": ["DOM", "ESNext"],
