@@ -34,6 +34,7 @@ export type Subtype =
   | 'Louvain'
   | 'Overlap'
   | 'PageRank'
+  | 'Betweenness Centrality'
   | 'Clustering Coefficient'
   | 'BoW'
   | 'Tversky'
@@ -47,7 +48,9 @@ export interface ResultMap {
   [to: string]: { measure: number; extra: string[] }
 }
 
-type PagerankMapping = { [node: string]: number }
+type PagerankMapping = ResultMap
+
+type BetweennessCentralityMapping = ResultMap
 
 export type HITSResult = {
   converged: boolean

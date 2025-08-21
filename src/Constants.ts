@@ -19,6 +19,7 @@ export const DEFAULT_SETTINGS: GraphAnalysisSettings = {
     'Otsuka-Chiai',
     'Co-Citations',
     'Label Propagation',
+    'Betweenness Centrality',
   ],
 }
 
@@ -58,6 +59,14 @@ export const ANALYSIS_TYPES: SubtypeInfo[] = [
     global: true,
     nlp: false,
     shortDesc: 'リンク構造に基づいてノートの重要度をランク付けします。',
+  },
+  {
+    anl: 'Centrality',
+    subtype: 'Betweenness Centrality',
+    desc: 'ノートが他のノート間の最短経路上にどれだけ位置しているかを測定します。この値が高いノートは、情報フローにおいて重要な役割を果たしている可能性があります。',
+    global: true,
+    nlp: false,
+    shortDesc: 'ノートが情報の中継点としてどれだけ重要かを測定します。',
   },
   {
     anl: 'Link Prediction',

@@ -3,6 +3,7 @@ import Graph from 'graphology'
 import louvain from 'graphology-communities-louvain'
 import hits from 'graphology-metrics/centrality/hits'
 import pageRank from 'graphology-metrics/centrality/pagerank'
+import betweenness from 'graphology-metrics/centrality/betweenness'
 
 import {
   App,
@@ -151,6 +152,18 @@ export default class MyGraph extends Graph {
       this.forEachNode((node) => {
         results[node] = {
           measure: ranks[node] ? roundNumber(ranks[node]) : 0,
+          extra: [],
+        }
+      })
+      return results
+    },
+
+    'Betweenness Centrality': async (a: string): Promise<ResultMap> => {
+      const centrality = betweenness(this)
+      const results: ResultMap = {}
+      this.forEachNode((node) => {
+        results[node] = {
+          measure: centrality[node] ? roundNumber(centrality[node]) : 0,
           extra: [],
         }
       })
