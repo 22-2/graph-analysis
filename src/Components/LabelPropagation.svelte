@@ -19,7 +19,7 @@
     openOrSwitch,
     presentPath,
   } from 'src/Utility'
-  import { onMount } from 'svelte'
+  import { onDestroy, onMount } from 'svelte'
   import FaLink from 'svelte-icons/fa/FaLink.svelte'
   import InfiniteScroll from 'svelte-infinite-scroll'
   import ExtensionIcon from './ExtensionIcon.svelte'
@@ -50,14 +50,15 @@
 
   let currFile = app.workspace.getActiveFile()
   $: currNode = currFile?.path
-  app.workspace.on('active-leaf-change', () => {
+
+  const onLeafChange = () => {
     blockSwitch = true
     setTimeout(() => {
       blockSwitch = false
       currFile = app.workspace.getActiveFile()
     }, 100)
     newBatch = []
-  })
+  }
 
   let its = 20
   const iterationsArr = Array(50)
@@ -98,6 +99,11 @@
 
   onMount(() => {
     currFile = app.workspace.getActiveFile()
+    app.workspace.on('active-leaf-change', onLeafChange)
+  })
+
+  onDestroy(() => {
+    app.workspace.off('active-leaf-change', onLeafChange)
   })
 </script>
 

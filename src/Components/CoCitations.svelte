@@ -138,23 +138,23 @@
     console.count('cocitations leaf change')
   }
 
-  const debounced = debounce(onMetadataChange, 1000)
-  app.workspace.off('active-leaf-change', onLeafChange)
-  app.metadataCache.off('changed', debounced)
-  plugin.registerEvent(app.workspace.on('active-leaf-change', onLeafChange))
-  plugin.registerEvent(app.metadataCache.on('changed', debounced))
+  const debouncedMetadataChange = debounce(onMetadataChange, 1000)
 
   onMount(() => {
     currFile = app.workspace.getActiveFile()
     currNode = currFile?.path
+    app.workspace.on('active-leaf-change', onLeafChange)
+    app.metadataCache.on('changed', debouncedMetadataChange)
   })
+
   onDestroy(() => {
+    app.workspace.off('active-leaf-change', onLeafChange)
+    app.metadataCache.off('changed', debouncedMetadataChange)
+    // Clear state
     newBatch = []
     visibleData = []
     promiseSortedResults = null
     currNode = undefined
-    app.metadataCache.off('changed', debounced)
-    app.workspace.off('active-leaf-change', onLeafChange)
   })
 </script>
 

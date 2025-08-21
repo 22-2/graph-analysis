@@ -25,7 +25,7 @@
     presentPath,
     roundNumber,
   } from 'src/Utility'
-  import { onMount } from 'svelte'
+  import { onDestroy, onMount } from 'svelte'
   import FaLink from 'svelte-icons/fa/FaLink.svelte'
   import InfiniteScroll from 'svelte-infinite-scroll'
   import ExtensionIcon from './ExtensionIcon.svelte'
@@ -63,16 +63,23 @@
   let blockSwitch = false
   let { resolvedLinks } = app.metadataCache
 
-  app.workspace.on('active-leaf-change', () => {
+  const onLeafChange = () => {
     blockSwitch = true
     setTimeout(() => {
       blockSwitch = false
       currFile = app.workspace.getActiveFile()
     }, 100)
     newBatch = []
+  }
+
+  onMount(() => {
+    currFile = app.workspace.getActiveFile()
+    app.workspace.on('active-leaf-change', onLeafChange)
   })
 
-  onMount(() => {})
+  onDestroy(() => {
+    app.workspace.off('active-leaf-change', onLeafChange)
+  })
 
   $: promiseSortedResults = !plugin.g
     ? null
@@ -124,10 +131,6 @@
         })
 
   $: visibleData = [...visibleData, ...newBatch]
-
-  onMount(() => {
-    currFile = app.workspace.getActiveFile()
-  })
 </script>
 
 <SubtypeOptions
