@@ -40,7 +40,7 @@ import {
   roundNumber,
   sum,
 } from 'src/Utility'
-import * as similarity from 'wink-nlp/utilities/similarity'
+// import * as similarity from 'wink-nlp/utilities/similarity'
 
 export default class MyGraph extends Graph {
   app: App
@@ -137,7 +137,11 @@ export default class MyGraph extends Graph {
     },
 
     HITS: async (a: string) => {
-      return hits(this)
+      return hits(this, {
+        maxIterations: 300,
+        //  failed to converge.
+        // 無いと収束しない
+      })
     },
 
     Overlap: async (a: string): Promise<ResultMap> => {
