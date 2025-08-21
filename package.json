@@ -39,9 +39,7 @@
     "standard-version": "^9.5.0",
     "svelte": "4.2.20",
     "svelte-icons": "^2.1.0",
-    "svelte-infinite-scroll": "^2.0.1",
-    "wink-nlp": "^1.14.3",
-    "wink-nlp-utils": "^2.1.0",
-    "wink-sentiment": "^5.0.2"
-  }
+    "svelte-infinite-scroll": "^2.0.1"
+  },
+  "packageManager": "pnpm"
 }
