@@ -29,9 +29,9 @@
   },
   "dependencies": {
     "@tsconfig/svelte": "4.0.1",
-    "graphology": "^0.23.2",
-    "graphology-communities-louvain": "^1.5.3",
-    "graphology-metrics": "^1.18.2",
+    "graphology": "^0.26.0",
+    "graphology-communities-louvain": "^2.0.2",
+    "graphology-metrics": "^2.4.0",
     "lodash.debounce": "^4.0.8",
     "lodash.isequal": "^4.5.0",
     "obsidian-community-lib": "1.2.0",
