@@ -155,6 +155,7 @@ export default class MyGraph extends Graph {
 
           results[to] = { measure, extra: Nab }
         })
+        return results
       } catch (err) {
         console.log(err)
         console.log('could not found node', a)
