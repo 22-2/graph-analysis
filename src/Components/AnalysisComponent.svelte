@@ -123,12 +123,14 @@
       }
       case 'Louvain': {
         const results: string[] = await plugin.g.algs['Louvain'](currNode, { resolution })
-        return results.map(to => ({
-          to,
-          linked: isLinked(resolvedLinks, currNode, to, false),
-          resolved: !to.endsWith('.md') || !!app.metadataCache.getFirstLinkpathDest(to, ''),
-          img: settings.showImgThumbnails && isImg(to) ? getImgBufferPromise(app, to) : null,
-        }))
+        return results
+          .map(to => ({
+            to,
+            linked: isLinked(resolvedLinks, currNode, to, false),
+            resolved: !to.endsWith('.md') || !!app.metadataCache.getFirstLinkpathDest(to, ''),
+            img: settings.showImgThumbnails && isImg(to) ? getImgBufferPromise(app, to) : null,
+          }))
+          .filter(node => !(excludeLinked && node.linked))
       }
       case 'Label Propagation': {
         const comms: Communities = await plugin.g.algs[currSubtype]('', { iterations: its })
