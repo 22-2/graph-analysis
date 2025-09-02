@@ -1,7 +1,5 @@
 <script lang="ts">
   import type { App } from 'obsidian'
-  import { hoverPreview } from 'obsidian-community-lib'
-  import { isLinked } from "src/Utility"
   import type AnalysisView from 'src/AnalysisView'
   import { ANALYSIS_TYPES, ICON, MEASURE, NODE } from 'src/Constants'
   import type {
@@ -14,17 +12,15 @@
     classExt,
     classLinked,
     classResolved,
-    getImgBufferPromise,
-    isImg,
-    openMenu,
+    getImgBufferPromise, hoverPreview, isImg, isLinked, openMenu,
     openOrSwitch,
-    presentPath,
+    presentPath
   } from 'src/Utility'
   import { onDestroy, onMount } from 'svelte'
   import FaLink from 'svelte-icons/fa/FaLink.svelte'
-  import InfiniteScroll from './InfiniteScroll.svelte'
   import ExtensionIcon from './ExtensionIcon.svelte'
   import ImgThumbnail from './ImgThumbnail.svelte'
+  import InfiniteScroll from './InfiniteScroll.svelte'
   import SubtypeOptions from './SubtypeOptions.svelte'
 
   let { app, plugin, settings, view, currSubtype } = $props<{

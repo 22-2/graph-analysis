@@ -1,9 +1,7 @@
 <script lang="ts">
   import type { App } from 'obsidian'
-  import { hoverPreview } from 'obsidian-community-lib'
-  import { isLinked, isInVault } from "src/Utility"
   import type AnalysisView from 'src/AnalysisView'
-  import { ANALYSIS_TYPES, ICON, MEASURE } from 'src/Constants'
+  import { ANALYSIS_TYPES, MEASURE } from 'src/Constants'
   import type {
     GraphAnalysisSettings,
     HITSResult,
@@ -13,17 +11,15 @@
   import {
     classExt,
     dropPath,
-    getImgBufferPromise,
-    isImg,
-    openMenu,
+    getImgBufferPromise, hoverPreview, isImg, isInVault, isLinked, openMenu,
     openOrSwitch,
     presentPath,
-    roundNumber,
+    roundNumber
   } from 'src/Utility'
   import { onDestroy, onMount } from 'svelte'
-  import InfiniteScroll from './InfiniteScroll.svelte'
   import ExtensionIcon from './ExtensionIcon.svelte'
   import ImgThumbnail from './ImgThumbnail.svelte'
+  import InfiniteScroll from './InfiniteScroll.svelte'
   import SubtypeOptions from './SubtypeOptions.svelte'
 
   let { app, plugin, settings, view, currSubtype } = $props<{

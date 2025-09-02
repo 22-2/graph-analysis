@@ -1,10 +1,9 @@
 <script lang="ts">
+  import debounce from 'lodash.debounce'
   import type { App } from 'obsidian'
   import { MarkdownView } from 'obsidian'
-  import { hoverPreview } from 'obsidian-community-lib'
   import type AnalysisView from 'src/AnalysisView'
-  import { isLinked } from "src/Utility"
-  import { ANALYSIS_TYPES, ICON, MEASURE, NODE } from 'src/Constants'
+  import { ANALYSIS_TYPES, ICON, MEASURE } from 'src/Constants'
   import type {
     CoCitation,
     CoCitationMap,
@@ -13,22 +12,18 @@
   } from 'src/Interfaces'
   import type GraphAnalysisPlugin from 'src/main'
   import {
-    classExt,
     dropPath,
-    getImgBufferPromise,
-    isImg,
-    openMenu,
+    getImgBufferPromise, hoverPreview, isImg, isLinked, openMenu,
     openOrSwitch,
-    presentPath,
+    presentPath
   } from 'src/Utility'
   import { onDestroy, onMount } from 'svelte'
   import FaLink from 'svelte-icons/fa/FaLink.svelte'
-  import InfiniteScroll from './InfiniteScroll.svelte'
   import ExtensionIcon from './ExtensionIcon.svelte'
   import ImgThumbnail from './ImgThumbnail.svelte'
-  import SubtypeOptions from './SubtypeOptions.svelte'
-  import debounce from 'lodash.debounce'
+  import InfiniteScroll from './InfiniteScroll.svelte'
   import RenderedMarkdown from './RenderedMarkdown.svelte'
+  import SubtypeOptions from './SubtypeOptions.svelte'
 
   let { app, plugin, settings, view, currSubtype } = $props<{
     app: App
