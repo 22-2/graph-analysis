@@ -48,7 +48,7 @@
 
 <style>
   .CC-sentence {
-    padding-left: 40px;
+    padding-left: 0;
     color: var(--text-muted);
   }
 </style>

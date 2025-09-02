@@ -81,30 +81,32 @@
           </summary>
           <div class="GA-details">
             {#each node.coCitations as citation (citation.source + citation.line)}
-              <div class="CC-item">
-                From:
-                <!-- svelte-ignore a11y-mouse-events-have-key-events -->
-                <!-- svelte-ignore a11y-no-static-element-interactions -->
-                <span
-                  class="internal-link"
-                  onmousedown={async (e) => {
-                    if (e.button === 0 || e.button === 1)
-                      await openOrSwitch(app, citation.source, e)
-                  }}
-                  onmouseover={(e) =>
-                    hoverPreview(e, view, dropPath(citation.source))}
-                >
-                  {presentPath(citation.source)}
-                </span>
-                ({citation.measure.toFixed(2)})
+              <div class="citation-group">
+                <div class="CC-item">
+                  From:
+                  <!-- svelte-ignore a11y-mouse-events-have-key-events -->
+                  <!-- svelte-ignore a11y-no-static-element-interactions -->
+                  <span
+                    class="internal-link"
+                    onmousedown={async (e) => {
+                      if (e.button === 0 || e.button === 1)
+                        await openOrSwitch(app, citation.source, e)
+                    }}
+                    onmouseover={(e) =>
+                      hoverPreview(e, view, dropPath(citation.source))}
+                  >
+                    {presentPath(citation.source)}
+                  </span>
+                  ({citation.measure.toFixed(2)})
+                </div>
+                <RenderedMarkdown
+                  {app}
+                  sentence={citation.sentence}
+                  sourcePath={citation.source}
+                  line={citation.line}
+                  component={view}
+                />
               </div>
-              <RenderedMarkdown
-                {app}
-                sentence={citation.sentence}
-                sourcePath={citation.source}
-                line={citation.line}
-                component={view}
-              />
             {/each}
           </div>
         </details>
@@ -118,6 +120,9 @@
     display: flex;
     flex-direction: column;
   }
+  .GA-CC details {
+    display: block;
+  }
   .is-unresolved {
     color: var(--text-muted);
   }
@@ -129,6 +134,9 @@
     font-size: var(--font-size-secondary);
     border: 1px solid transparent;
     border-radius: 5px;
+  }
+  .citation-group {
+    margin-bottom: 0.5em;
   }
   .CC-item {
     padding-left: 30px;
