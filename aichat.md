@@ -1,0 +1,1 @@
+- [SOLID原則に基づくグラフビュー統合 | Google AI Studio](https://aistudio.google.com/app/prompts/1WG_5OUvQqw9IPOpDP0He5lqLiXRUy6cC)
