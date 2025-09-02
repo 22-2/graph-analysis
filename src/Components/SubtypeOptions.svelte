@@ -27,9 +27,6 @@
     plugin: GraphAnalysisPlugin
     app: App
     view: AnalysisView
-    blockSwitch: boolean
-    visibleData: any[]
-    page: number
   }
 
   let {
@@ -43,20 +40,13 @@
     plugin,
     app,
     view,
-    blockSwitch = $bindable(),
-    visibleData = $bindable(),
-    page = $bindable(),
   } = $props<SubtypeOptionsProps>()
-
-  function resetState() {
-    blockSwitch = true
-    visibleData = []
-    page = 0
-  }
 </script>
 
 <span class="GA-Subtype-Options">
-  <InfoIcon {currSubtypeInfo} />
+  {#if currSubtypeInfo}
+    <InfoIcon {currSubtypeInfo} />
+  {/if}
 
   {#if excludeLinked !== undefined}
     <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -65,9 +55,6 @@
       aria-label={excludeLinked ? 'Show Linked Notes' : 'Exclude Linked Notes'}
       onclick={() => {
         excludeLinked = !excludeLinked
-        if (!frozen) {
-          resetState()
-        }
       }}
     >
       <span class="icon">
@@ -85,9 +72,6 @@
       aria-label={noZero ? 'Show Zeros' : 'Hide Zeros'}
       onclick={() => {
         noZero = !noZero
-        if (!frozen) {
-          resetState()
-        }
       }}
     >
       <span class="icon">
@@ -102,12 +86,9 @@
   {#if ascOrder !== undefined}
     <span
       class="GA-Option-span"
-      aria-label={ascOrder ? 'Ascending' : 'Descending'}
+      aria-label={ascOrder ? 'Descending' : 'Ascending'}
       onclick={() => {
         ascOrder = !ascOrder
-        if (!frozen) {
-          resetState()
-        }
       }}
     >
       <span class="icon">
@@ -123,18 +104,11 @@
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <span
       class="GA-Option-span"
-      aria-label={frozen ? `Frozen on: ${currFile.basename}` : 'Unfrozen'}
+      aria-label={frozen ? `Frozen on: ${currFile?.basename}` : 'Unfrozen'}
       onclick={() => {
         frozen = !frozen
-        if (!frozen && !currSubtypeInfo.global) {
-          resetState()
+        if (!frozen) {
           setTimeout(() => (currFile = app.workspace.getActiveFile()), 100)
-        } else if (!frozen && currSubtypeInfo.global) {
-          blockSwitch = true
-          setTimeout(() => {
-            blockSwitch = false
-            currFile = app.workspace.getActiveFile()
-          }, 100)
         }
       }}
     >
@@ -154,9 +128,6 @@
       aria-label="Sort By: {sortBy ? 'Authority' : 'Hub'}"
       onclick={() => {
         sortBy = !sortBy
-        if (!frozen) {
-          resetState()
-        }
       }}
     >
       <span class="icon">
@@ -173,8 +144,7 @@
     class="GA-Option-span"
     aria-label="Refresh Index"
     onclick={async () => {
-      await plugin.refreshGraph()
-      await view.draw(currSubtypeInfo.subtype)
+      await plugin.refreshGraphAndViews()
     }}
   >
     <span class="icon">
@@ -186,16 +156,26 @@
 <style>
   .GA-Subtype-Options {
     margin-left: 10px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
   }
   .icon {
     color: var(--text-normal);
-    display: inline-block;
-    padding-top: 5px !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 20px;
     height: 20px;
+    cursor: pointer;
   }
 
   .GA-Option-span {
     padding: 2px;
+    border-radius: 4px;
+  }
+  .GA-Option-span:hover {
+    background-color: var(--background-modifier-hover);
   }
 </style>
