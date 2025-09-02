@@ -16,21 +16,43 @@
   import MdExposureZero from 'svelte-icons/md/MdExposureZero.svelte'
   import InfoIcon from './InfoIcon.svelte'
 
-  export let currSubtypeInfo: SubtypeInfo
-  export let noZero: boolean = undefined
-  export let sortBy: boolean = undefined
-  export let ascOrder: boolean = undefined
-  export let currFile: TFile = undefined
-  export let frozen: boolean = undefined
-  export let excludeLinked: boolean = undefined
-  export let plugin: GraphAnalysisPlugin
-  export let app: App
-  export let view: AnalysisView
-  export let blockSwitch: boolean
-  export let newBatch: any[]
-  export let visibleData: any[]
-  export let promiseSortedResults: Promise<any[]>
-  export let page: number
+  type SubtypeOptionsProps = {
+    currSubtypeInfo?: SubtypeInfo
+    noZero?: boolean
+    sortBy?: boolean
+    ascOrder?: boolean
+    currFile?: TFile
+    frozen?: boolean
+    excludeLinked?: boolean
+    plugin: GraphAnalysisPlugin
+    app: App
+    view: AnalysisView
+    blockSwitch: boolean
+    visibleData: any[]
+    page: number
+  }
+
+  let {
+    currSubtypeInfo = $bindable(),
+    noZero = $bindable(undefined),
+    sortBy = $bindable(undefined),
+    ascOrder = $bindable(undefined),
+    currFile = $bindable(undefined),
+    frozen = $bindable(undefined),
+    excludeLinked = $bindable(undefined),
+    plugin,
+    app,
+    view,
+    blockSwitch = $bindable(),
+    visibleData = $bindable(),
+    page = $bindable(),
+  } = $props<SubtypeOptionsProps>()
+
+  function resetState() {
+    blockSwitch = true
+    visibleData = []
+    page = 0
+  }
 </script>
 
 <span class="GA-Subtype-Options">
@@ -41,14 +63,10 @@
     <span
       class="GA-Option-span"
       aria-label={excludeLinked ? 'Show Linked Notes' : 'Exclude Linked Notes'}
-      on:click={() => {
+      onclick={() => {
         excludeLinked = !excludeLinked
         if (!frozen) {
-          blockSwitch = true
-          newBatch = []
-          visibleData = []
-          promiseSortedResults = null
-          page = 0
+          resetState()
         }
       }}
     >
@@ -65,14 +83,10 @@
     <span
       class="GA-Option-span"
       aria-label={noZero ? 'Show Zeros' : 'Hide Zeros'}
-      on:click={() => {
+      onclick={() => {
         noZero = !noZero
         if (!frozen) {
-          blockSwitch = true
-          newBatch = []
-          visibleData = []
-          promiseSortedResults = null
-          page = 0
+          resetState()
         }
       }}
     >
@@ -89,14 +103,10 @@
     <span
       class="GA-Option-span"
       aria-label={ascOrder ? 'Ascending' : 'Descending'}
-      on:click={() => {
+      onclick={() => {
         ascOrder = !ascOrder
         if (!frozen) {
-          blockSwitch = true
-          newBatch = []
-          visibleData = []
-          promiseSortedResults = null
-          page = 0
+          resetState()
         }
       }}
     >
@@ -114,15 +124,10 @@
     <span
       class="GA-Option-span"
       aria-label={frozen ? `Frozen on: ${currFile.basename}` : 'Unfrozen'}
-      on:click={() => {
+      onclick={() => {
         frozen = !frozen
         if (!frozen && !currSubtypeInfo.global) {
-          blockSwitch = true
-          newBatch = []
-          visibleData = []
-          promiseSortedResults = null
-          page = 0
-
+          resetState()
           setTimeout(() => (currFile = app.workspace.getActiveFile()), 100)
         } else if (!frozen && currSubtypeInfo.global) {
           blockSwitch = true
@@ -130,7 +135,6 @@
             blockSwitch = false
             currFile = app.workspace.getActiveFile()
           }, 100)
-          newBatch = []
         }
       }}
     >
@@ -148,14 +152,10 @@
     <span
       class="GA-Option-span"
       aria-label="Sort By: {sortBy ? 'Authority' : 'Hub'}"
-      on:click={() => {
+      onclick={() => {
         sortBy = !sortBy
         if (!frozen) {
-          blockSwitch = true
-          newBatch = []
-          visibleData = []
-          promiseSortedResults = null
-          page = 0
+          resetState()
         }
       }}
     >
@@ -172,7 +172,7 @@
   <span
     class="GA-Option-span"
     aria-label="Refresh Index"
-    on:click={async () => {
+    onclick={async () => {
       await plugin.refreshGraph()
       await view.draw(currSubtypeInfo.subtype)
     }}

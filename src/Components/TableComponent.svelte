@@ -1,17 +1,11 @@
 <script lang="ts">
   import type { App } from 'obsidian'
   import { MarkdownView } from 'obsidian'
-  import { hoverPreview, isInVault, isLinked } from 'obsidian-community-lib'
+  import { hoverPreview } from 'obsidian-community-lib'
+  import { isLinked, isInVault } from "src/Utility"
   import type AnalysisView from 'src/AnalysisView'
-  import {
-    ANALYSIS_TYPES,
-    ICON,
-    LINKED,
-    MEASURE,
-    NOT_LINKED,
-  } from 'src/Constants'
+  import { ANALYSIS_TYPES, ICON, LINKED, MEASURE, NOT_LINKED } from 'src/Constants'
   import type {
-    ComponentResults,
     GraphAnalysisSettings,
     ResultMap,
     Subtype,
@@ -27,25 +21,29 @@
     presentPath,
   } from 'src/Utility'
   import { onDestroy, onMount } from 'svelte'
-  import FaLink from 'svelte-icons/fa/FaLink.svelte'
-  import InfiniteScroll from 'svelte-infinite-scroll'
+  import InfiniteScroll from './InfiniteScroll.svelte'
   import ExtensionIcon from './ExtensionIcon.svelte'
   import ImgThumbnail from './ImgThumbnail.svelte'
   import SubtypeOptions from './SubtypeOptions.svelte'
   import debounce from 'lodash.debounce'
 
-  export let app: App
-  export let plugin: GraphAnalysisPlugin
-  export let settings: GraphAnalysisSettings
-  export let view: AnalysisView
-  export let currSubtype: Subtype
+  let { app, plugin, settings, view, currSubtype } = $props<{
+    app: App
+    plugin: GraphAnalysisPlugin
+    settings: GraphAnalysisSettings
+    view: AnalysisView
+    currSubtype: Subtype
+  }>()
 
-  $: currSubtypeInfo = ANALYSIS_TYPES.find((sub) => sub.subtype === currSubtype)
-  let frozen = false
-  let ascOrder = false
-  let { noInfinity, noZero } = settings
-  let excludeLinked = settings.excludeLinked
-  let currFile = app.workspace.getActiveFile()
+  let currSubtypeInfo = $derived(
+    ANALYSIS_TYPES.find((sub) => sub.subtype === currSubtype)
+  )
+  let frozen = $state(false)
+  let ascOrder = $state(false)
+  let noInfinity = $state(settings.noInfinity)
+  let noZero = $state(settings.noZero)
+  let excludeLinked = $state(settings.excludeLinked)
+  let currFile = $state(app.workspace.getActiveFile())
 
   interface ComponentResults {
     measure: number
@@ -56,78 +54,91 @@
     img: Promise<ArrayBuffer> | null
   }
 
-  $: currNode = currFile?.path
+  const currNode = $derived(currFile?.path)
   let size = 50
   let current_component: HTMLElement
-  let newBatch: ComponentResults[] = []
-  let visibleData: ComponentResults[] = []
-  let page = 0
-  let blockSwitch = false
+  let visibleData = $state<ComponentResults[]>([])
+  let page = $state(0)
+  let blockSwitch = $state(false)
   let { resolvedLinks } = app.metadataCache
+  let hasMore = $state(false);
 
-  $: promiseSortedResults =
+  const promiseSortedResults = $derived(
     !plugin.g || !currNode
-      ? console.log('null')
-      : plugin.g.algs[currSubtype](currNode)
-          .then((results: ResultMap) => {
-            const greater = ascOrder ? 1 : -1
-            const lesser = ascOrder ? -1 : 1
-            const componentResults: ComponentResults[] = []
+      ? null
+      : plugin.g.algs[currSubtype](currNode).then((results: ResultMap) => {
+          const greater = ascOrder ? 1 : -1
+          const lesser = ascOrder ? -1 : 1
+          const componentResults: ComponentResults[] = []
 
-            plugin.g.forEachNode((to) => {
-              const { measure, extra } = (results as ResultMap)[to]
-              const linked = isLinked(resolvedLinks, currNode, to, false)
-              if (
-                !(noInfinity && measure === Infinity) &&
-                !(noZero && measure === 0) &&
-                !(excludeLinked && linked)
-              ) {
-                const resolved = !to.endsWith('.md') || isInVault(app, to)
-                const img =
-                  plugin.settings.showImgThumbnails && isImg(to)
-                    ? getImgBufferPromise(app, to)
-                    : null
-                componentResults.push({
-                  measure,
-                  linked,
-                  to,
-                  resolved,
-                  extra,
-                  img,
-                })
-              }
-            })
-            componentResults.sort((a, b) => {
-              return a.measure === b.measure
-                ? a.extra?.length > b.extra?.length
-                  ? greater
-                  : lesser
-                : a.measure > b.measure
+          plugin.g.forEachNode((to) => {
+            const { measure, extra } = (results as ResultMap)[to]
+            const linked = isLinked(resolvedLinks, currNode, to, false)
+            if (
+              !(noInfinity && measure === Infinity) &&
+              !(noZero && measure === 0) &&
+              !(excludeLinked && linked)
+            ) {
+              const resolved = !to.endsWith('.md') || isInVault(app, to)
+              const img =
+                plugin.settings.showImgThumbnails && isImg(to)
+                  ? getImgBufferPromise(app, to)
+                  : null
+              componentResults.push({
+                measure,
+                linked,
+                to,
+                resolved,
+                extra,
+                img,
+              })
+            }
+          })
+          componentResults.sort((a, b) => {
+            return a.measure === b.measure
+              ? a.extra?.length > b.extra?.length
                 ? greater
                 : lesser
-            })
-            return componentResults
+              : a.measure > b.measure
+              ? greater
+              : lesser
           })
-          .then((res) => {
-            newBatch = res.slice(0, size)
-            setTimeout(() => {
-              blockSwitch = false
-            }, 100)
-            return res
-          })
+          return componentResults
+        })
+  )
 
-  $: visibleData = [...visibleData, ...newBatch]
+  $effect(async () => {
+    const sorted = await promiseSortedResults
+    if (sorted) {
+      visibleData = sorted.slice(0, size)
+      page = 0
+      hasMore = sorted.length > visibleData.length; // hasMoreを更新
+      setTimeout(() => {
+        blockSwitch = false
+      }, 100)
+    } else {
+      visibleData = []
+      hasMore = false; // hasMoreを更新
+    }
+  })
+
+  async function loadMore() {
+    if (!blockSwitch) {
+      page++
+      const sortedResults = await promiseSortedResults
+      if (sortedResults) {
+        const newBatch = sortedResults.slice(size * page, size * (page + 1) - 1)
+        visibleData = [...visibleData, ...newBatch]
+        hasMore = sortedResults.length > visibleData.length; // hasMoreを更新
+      }
+    }
+  }
 
   const onMetadataChange = async () => {
     if (!current_component.checkVisibility()) {
       return
     }
     if (!frozen) {
-      blockSwitch = true
-      newBatch = []
-      visibleData = []
-      promiseSortedResults = null
-      page = 0
       setTimeout(() => (currFile = app.workspace.getActiveFile()), 100)
       await plugin.refreshGraph()
       await view.draw(currSubtypeInfo!.subtype)
@@ -148,11 +159,6 @@
     }
 
     if (!frozen) {
-      blockSwitch = true
-      newBatch = []
-      visibleData = []
-      promiseSortedResults = null
-      page = 0
       setTimeout(() => (currFile = app.workspace.getActiveFile()), 100)
     }
     console.count('table component leaf change')
@@ -162,8 +168,6 @@
 
   onMount(() => {
     currFile = app.workspace.getActiveFile()
-    currNode = currFile?.path
-
     app.workspace.on('active-leaf-change', onLeafChange)
     app.metadataCache.on('changed', debouncedMetadataChange)
   })
@@ -172,10 +176,8 @@
     app.workspace.off('active-leaf-change', onLeafChange)
     app.metadataCache.off('changed', debouncedMetadataChange)
     // Clear state
-    newBatch = []
     visibleData = []
-    promiseSortedResults = null
-    currNode = undefined
+    currFile = null
   })
 </script>
 
@@ -190,9 +192,7 @@
   {plugin}
   {view}
   bind:blockSwitch
-  bind:newBatch
   bind:visibleData
-  bind:promiseSortedResults
   bind:page
 />
 
@@ -216,11 +216,13 @@
               <td
                 aria-label={node.extra.map(presentPath).join('\n')}
                 aria-label-position="left"
-                on:mousedown={async (e) => {
-                  if (e.button === 0 || e.button === 1) await openOrSwitch(app, node.to, e)
+                onmousedown={async (e) => {
+                  if (e.button === 0 || e.button === 1)
+                    await openOrSwitch(app, node.to, e)
                 }}
-                on:contextmenu={(e) => openMenu(e, app, { nodePath: node.to })}
-                on:mouseover={(e) => hoverPreview(e, view, dropPath(node.to))}
+                oncontextmenu={(e) =>
+                  openMenu(e, app, { nodePath: node.to })}
+                onmouseover={(e) => hoverPreview(e, view, dropPath(node.to))}
               >
                 {#if node.linked}
                   <span class={ICON}>
@@ -246,21 +248,20 @@
 
         <InfiniteScroll
           hasMore={sortedResults.length > visibleData.length}
-          threshold={100}
           elementScroll={current_component.parentNode}
-          on:loadMore={() => {
-            if (!blockSwitch) {
-              page++
-              newBatch = sortedResults.slice(size * page, size * (page + 1) - 1)
-              console.log({ newBatch })
-            }
-          }}
+          onloadMore={loadMore}
         />
-        {visibleData.length} / {sortedResults.length}
       {/key}
     {/await}
   {/if}
 </table>
+{#if promiseSortedResults}
+  {#await promiseSortedResults then sortedResults}
+    <div style="margin-top: 0.5em;">
+      {visibleData.length} / {sortedResults.length}
+    </div>
+  {/await}
+{/if}
 
 <style>
   table.GA-table {

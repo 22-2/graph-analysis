@@ -4,13 +4,14 @@
 
   import type GraphAnalysisPlugin from '../main'
 
-  export let plugin: GraphAnalysisPlugin
-  export let settingName: string
-  export let options: string[]
-  let selected = plugin.settings[settingName] as string[]
+  let { plugin, settingName, options } = $props<{
+    plugin: GraphAnalysisPlugin
+    settingName: string
+    options: string[]
+  }>()
+  let selected = $state(plugin.settings[settingName] as string[])
 
-  let toNone = selected.length === 0 ? false : true
-  $: toNone = selected.length === 0 ? false : true
+  const toNone = $derived(selected.length !== 0)
 
   async function save() {
     if (plugin.settings[settingName] === undefined) {
@@ -36,7 +37,7 @@
 
 <div>
   <button
-    on:click={async () => {
+    onclick={async () => {
       if (toNone) selected = []
       else selected = options
 
@@ -55,7 +56,7 @@
           type="checkbox"
           value={option}
           bind:group={selected}
-          on:change={async () => save()}
+          onchange={async () => save()}
         />
         {option}
       </label>

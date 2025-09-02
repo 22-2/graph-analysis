@@ -18,13 +18,13 @@ const context = await esbuild.context({
   },
   plugins: [
     esbuildSvelte({
-      compilerOptions: { css: 'injected' },
+      compilerOptions: {
+        css: 'injected',
+        warningFilter: (warning) => !warning.code.startsWith('a11y'), // a11y-から始まる警告をすべて無視
+      },
       preprocess: sveltePreprocess(),
     }),
   ],
-  define: {
-    DEV_MODE: String(!prod),
-  },
   entryPoints: ['src/main.ts'],
   bundle: true,
   external: [

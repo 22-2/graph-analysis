@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { App } from 'obsidian'
-  import { hoverPreview, isLinked } from 'obsidian-community-lib'
+  import { hoverPreview } from 'obsidian-community-lib'
+  import { isLinked } from "src/Utility"
   import type AnalysisView from 'src/AnalysisView'
   import { ANALYSIS_TYPES, ICON, MEASURE, NODE } from 'src/Constants'
   import type {
@@ -21,16 +22,18 @@
   } from 'src/Utility'
   import { onDestroy, onMount } from 'svelte'
   import FaLink from 'svelte-icons/fa/FaLink.svelte'
-  import InfiniteScroll from 'svelte-infinite-scroll'
+  import InfiniteScroll from './InfiniteScroll.svelte'
   import ExtensionIcon from './ExtensionIcon.svelte'
   import ImgThumbnail from './ImgThumbnail.svelte'
   import SubtypeOptions from './SubtypeOptions.svelte'
 
-  export let app: App
-  export let plugin: GraphAnalysisPlugin
-  export let settings: GraphAnalysisSettings
-  export let view: AnalysisView
-  export let currSubtype: Subtype
+  let { app, plugin, settings, view, currSubtype } = $props<{
+    app: App
+    plugin: GraphAnalysisPlugin
+    settings: GraphAnalysisSettings
+    view: AnalysisView
+    currSubtype: Subtype
+  }>()
 
   interface ComponentResults {
     label: string
@@ -39,17 +42,19 @@
 
   let { resolvedLinks } = app.metadataCache
 
-  $: currSubtypeInfo = ANALYSIS_TYPES.find((sub) => sub.subtype === currSubtype)
-  let ascOrder = false
+  let currSubtypeInfo = $derived(
+    ANALYSIS_TYPES.find((sub) => sub.subtype === currSubtype)
+  )
+  let ascOrder = $state(false)
   let size = 50
   let current_component: HTMLElement
-  let newBatch: ComponentResults[] = []
-  let visibleData: ComponentResults[] = []
-  let page = 0
-  let blockSwitch = false
+  let visibleData = $state<ComponentResults[]>([])
+  let page = $state(0)
+  let blockSwitch = $state(false)
+  let hasMore = $state(false);
 
-  let currFile = app.workspace.getActiveFile()
-  $: currNode = currFile?.path
+  let currFile = $state(app.workspace.getActiveFile())
+  const currNode = $derived(currFile?.path)
 
   const onLeafChange = () => {
     blockSwitch = true
@@ -57,45 +62,65 @@
       blockSwitch = false
       currFile = app.workspace.getActiveFile()
     }, 100)
-    newBatch = []
   }
 
-  let its = 20
+  let its = $state(20)
   const iterationsArr = Array(50)
     .fill(0)
     .map((i, j) => j + 1)
 
-  $: promiseSortedResults = !plugin.g
-    ? null
-    : plugin.g.algs[currSubtype]('', { iterations: its })
-        .then((comms: Communities) => {
-          const greater = ascOrder ? 1 : -1
-          const lesser = ascOrder ? -1 : 1
+  const promiseSortedResults = $derived(
+    !plugin.g
+      ? null
+      : plugin.g.algs[currSubtype]('', { iterations: its }).then(
+          (comms: Communities) => {
+            const greater = ascOrder ? 1 : -1
+            const lesser = ascOrder ? -1 : 1
 
-          const componentResults: ComponentResults[] = []
-          Object.keys(comms).forEach((label) => {
-            let comm = comms[label]
-            if (comm.length > 1) {
-              componentResults.push({
-                label,
-                comm,
-              })
-            }
-          })
-          componentResults.sort((a, b) =>
-            a.comm.length > b.comm.length ? greater : lesser
-          )
-          return componentResults
-        })
-        .then((res) => {
-          newBatch = res.slice(0, size)
-          setTimeout(() => {
-            blockSwitch = false
-          }, 100)
-          return res
-        })
+            const componentResults: ComponentResults[] = []
+            Object.keys(comms).forEach((label) => {
+              let comm = comms[label]
+              if (comm.length > 1) {
+                componentResults.push({
+                  label,
+                  comm,
+                })
+              }
+            })
+            componentResults.sort((a, b) =>
+              a.comm.length > b.comm.length ? greater : lesser
+            )
+            return componentResults
+          }
+        )
+  )
 
-  $: visibleData = [...visibleData, ...newBatch]
+  $effect(async () => {
+    const sorted = await promiseSortedResults
+    if (sorted) {
+      visibleData = sorted.slice(0, size)
+      page = 0
+      hasMore = sorted.length > visibleData.length; // hasMoreを更新
+      setTimeout(() => {
+        blockSwitch = false
+      }, 100)
+    } else {
+      visibleData = []
+      hasMore = false; // hasMoreを更新
+    }
+  })
+
+  async function loadMore() {
+    if (!blockSwitch) {
+      page++
+      const sortedResults = await promiseSortedResults
+      if (sortedResults) {
+        const newBatch = sortedResults.slice(size * page, size * (page + 1) - 1)
+        visibleData = [...visibleData, ...newBatch]
+        hasMore = sortedResults.length > visibleData.length; // hasMoreを更新
+      }
+    }
+  }
 
   onMount(() => {
     currFile = app.workspace.getActiveFile()
@@ -114,9 +139,7 @@
         bind:currSubtypeInfo
         bind:ascOrder
         bind:blockSwitch
-        bind:newBatch
         bind:visibleData
-        bind:promiseSortedResults
         bind:page
         {plugin}
         {view}
@@ -129,20 +152,7 @@
         type="range"
         min="1"
         max="30"
-        value={its}
-        on:change={(e) => {
-          const value = Number.parseInt(e.target.value)
-          blockSwitch = true
-          visibleData = []
-          promiseSortedResults = null
-          page = 0
-          setTimeout(() => {
-            blockSwitch = false
-          }, 100)
-          newBatch = []
-
-          its = value
-        }}
+        bind:value={its}
       />
     </span>
   </div>
@@ -154,7 +164,7 @@
             <details class="tree-item-self">
               <summary
                 class="tree-item-inner"
-                on:contextmenu={(e) =>
+                oncontextmenu={(e) =>
                   openMenu(e, app, { toCopy: comm.comm.join('\n') })}
               >
                 <span
@@ -177,10 +187,11 @@
                     {classResolved(app, member)}
                     {classExt(member)}
                       "
-                    on:mousedown={async (e) => {
-                      if (e.button === 0 || e.button === 1) await openOrSwitch(app, member, e)
+                    onmousedown={async (e) => {
+                      if (e.button === 0 || e.button === 1)
+                        await openOrSwitch(app, member, e)
                     }}
-                    on:mouseover={(e) => hoverPreview(e, view, member)}
+                    onmouseover={(e) => hoverPreview(e, view, member)}
                   >
                     {#if isLinked(resolvedLinks, comm.label, member, false)}
                       <span class={ICON}>
@@ -205,15 +216,8 @@
 
         <InfiniteScroll
           hasMore={sortedResults.length > visibleData.length}
-          threshold={100}
           elementScroll={current_component.parentNode}
-          on:loadMore={() => {
-            if (!blockSwitch) {
-              page++
-              newBatch = sortedResults.slice(size * page, size * (page + 1) - 1)
-              console.log({ newBatch })
-            }
-          }}
+          onloadMore={loadMore}
         />
         {visibleData.length} / {sortedResults.length}
       {/key}

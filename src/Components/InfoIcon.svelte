@@ -2,7 +2,7 @@
   import type { SubtypeInfo } from 'src/Interfaces'
   import FaRegQuestionCircle from 'svelte-icons/fa/FaRegQuestionCircle.svelte'
 
-  export let currSubtypeInfo: SubtypeInfo
+  let { currSubtypeInfo } = $props<{ currSubtypeInfo: SubtypeInfo }>()
 
   const { anl, desc } = currSubtypeInfo
 </script>

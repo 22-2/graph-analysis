@@ -1,33 +1,30 @@
 import {
   App,
   CacheItem,
+  Constructor,
   EditorRange,
-  LinkCache,
+  ItemView,
   MarkdownView,
   Menu,
   Notice,
-  ReferenceCache,
   TFile,
-  WorkspaceLeaf,
+  WorkspaceLeaf
 } from 'obsidian'
 import {
   copy,
   createNewMDNote,
-  isInVault,
-  isLinked,
-  ResolvedLinks,
 } from 'obsidian-community-lib'
 import type AnalysisView from 'src/AnalysisView'
 import { DECIMALS, IMG_EXTENSIONS, LINKED, NOT_LINKED } from 'src/Constants'
 import type {
   ComponentResults,
   GraphAnalysisSettings,
-  LineSentences,
+  ResolvedLinks,
   ResultMap,
-  Subtype,
+  Subtype
 } from 'src/Interfaces'
-import type GraphAnalysisPlugin from 'src/main'
 import { CoCitation } from 'src/Interfaces'
+import type GraphAnalysisPlugin from 'src/main'
 
 export const sum = (arr: number[]) => {
   if (arr.length === 0) {
@@ -567,3 +564,74 @@ export function getAlgorithmDisplayName(
   }
   return subtype
 }
+
+/**
+ * Open your view on the chosen `side` if it isn't already open
+ * @param  {string} viewType
+ * @param  {Constructor<YourView>} viewClass The class constructor of your view
+ * @param  {"left"|"right"} [side="right"]
+ * @returns {Promise<YourView>} The opened view
+ */
+export async function openView<YourView extends ItemView>(
+  app: App,
+  viewType: string,
+  viewClass: Constructor<YourView>,
+  side: "left" | "right" = "right"
+): Promise<YourView> {
+  // @ts-expect-error
+  let leaf: WorkspaceLeaf = null;
+  for (leaf of app.workspace.getLeavesOfType(viewType)) {
+    if (leaf.view instanceof viewClass) {
+      return leaf.view;
+    }
+    await leaf.setViewState({ type: "empty" });
+    break;
+  }
+  
+// @ts-expect-error
+  leaf =
+    leaf ?? side === "right"
+      ? app.workspace.getRightLeaf(false)
+      : app.workspace.getLeftLeaf(false);
+
+  await leaf.setViewState({
+    type: viewType,
+    active: true,
+  });
+
+  return leaf.view as YourView;
+}
+
+export const isInVault = (app: App, noteName: string, sourcePath = "") => !!app.metadataCache.getFirstLinkpathDest(noteName, sourcePath);
+
+/**
+ * Given a list of resolved links from app.metadataCache, check if `from` has a link to `to`
+ * @param  {ResolvedLinks} resolvedLinks
+ * @param  {string} from Note name with link leaving (With or without '.md')
+ * @param  {string} to Note name with link arriving (With or without '.md')
+ * @param {boolean} [directed=true] Only check if `from` has a link to `to`. If not directed, check in both directions
+ */
+export function isLinked(
+  resolvedLinks: ResolvedLinks,
+  from: string,
+  to: string,
+  directed: boolean = true
+) {
+  from = addMD(from);
+  to = addMD(to);
+
+  const fromTo = resolvedLinks[from]?.hasOwnProperty(to);
+  if (!fromTo && !directed) {
+    const toFrom = resolvedLinks[to]?.hasOwnProperty(from);
+    return toFrom;
+  } else return fromTo;
+}
+
+/**
+ * Add '.md' to `noteName` if it isn't already there.
+ * @param  {string} noteName with or without '.md' on the end.
+ * @returns {string} noteName with '.md' on the end.
+ */
+export const addMD = (noteName: string): string => {
+  return noteName?.match(/\.MD$|\.md$/m) ? noteName : noteName + ".md";
+};

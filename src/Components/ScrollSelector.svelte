@@ -4,13 +4,15 @@
   import type { Subtype } from 'src/Interfaces'
   import { getAlgorithmDisplayName } from 'src/Utility'
 
-  export let currSubtype: Subtype
-  export let view: AnalysisView
+  let { currSubtype, view } = $props<{
+    currSubtype: Subtype
+    view: AnalysisView
+  }>()
 
-  // `bind:value` updates `currSubtype` on change.
-  // We also need to update the view's internal state.
-  function handleSelectionChange() {
-    view.currSubtype = currSubtype
+  // Svelte 5: Let the view handle the state change and redraw.
+  function handleSelectionChange(event: Event) {
+    const newSubtype = (event.target as HTMLSelectElement).value as Subtype
+    view.draw(newSubtype)
   }
 </script>
 
@@ -18,8 +20,8 @@
   <div class="selector-container">
     <select
       class="dropdown"
-      bind:value={currSubtype}
-      on:change={handleSelectionChange}
+      value={currSubtype}
+      onchange={handleSelectionChange}
     >
       {#each ANALYSIS_TYPES as sub}
         {#if view.plugin.settings.algsToShow.includes(sub.subtype)}

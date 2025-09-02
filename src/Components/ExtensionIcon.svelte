@@ -14,7 +14,7 @@
   import FaStickyNote from 'svelte-icons/fa/FaStickyNote.svelte'
   import { ICON } from 'src/Constants'
 
-  export let path: string
+  let { path } = $props<{ path: string }>()
 </script>
 
 {#if !path.endsWith('.md')}

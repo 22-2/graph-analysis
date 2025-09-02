@@ -1,4 +1,5 @@
 import { App, Notice, PluginSettingTab, Setting } from 'obsidian'
+import { mount } from 'svelte'
 import { ANALYSIS_TYPES, VIEW_TYPE_GRAPH_ANALYSIS } from 'src/Constants'
 import type { Subtype } from 'src/Interfaces'
 import type GraphAnalysisPlugin from 'src/main'
@@ -60,7 +61,7 @@ export class SampleSettingTab extends PluginSettingTab {
       })
 
     containerEl.createEl('h3', { text: 'Algorithms to Show' })
-    new Checkboxes({
+    mount(Checkboxes, {
       target: containerEl,
       props: {
         options: ANALYSIS_TYPES.map((type) => type.subtype),

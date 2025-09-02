@@ -1,4 +1,6 @@
 <script lang="ts">
+  let { img } = $props<{ img: Promise<ArrayBuffer> }>()
+
   function _arrayBufferToBase64(buffer: ArrayBuffer) {
     var binary = ''
     var bytes = new Uint8Array(buffer)
@@ -8,8 +10,6 @@
     }
     return window.btoa(binary)
   }
-
-  export let img: Promise<ArrayBuffer>
 </script>
 
 {#await img then src}

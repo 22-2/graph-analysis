@@ -10,22 +10,24 @@
   import TableComponent from './TableComponent.svelte'
   import HITS from './HITS.svelte'
 
-  export let app: App
-  export let plugin: GraphAnalysisPlugin
-  export let settings: GraphAnalysisSettings
-  export let view: AnalysisView
-  export let currSubtype: Subtype
+  let { app, plugin, settings, view, currSubtype } = $props<{
+    app: App
+    plugin: GraphAnalysisPlugin
+    settings: GraphAnalysisSettings
+    view: AnalysisView
+    currSubtype: Subtype
+  }>()
 
-  $: props = {
+  const props = $derived({
     app,
     plugin,
     settings,
     view,
     currSubtype,
-  }
+  })
 </script>
 
-<ScrollSelector bind:currSubtype {view} />
+<ScrollSelector {currSubtype} {view} />
 
 {#if currSubtype === 'Adamic Adar'}
   <TableComponent {...props} />

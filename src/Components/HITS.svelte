@@ -1,14 +1,9 @@
 <script lang="ts">
   import type { App } from 'obsidian'
-  import { hoverPreview, isInVault, isLinked } from 'obsidian-community-lib'
+  import { hoverPreview } from 'obsidian-community-lib'
+  import { isLinked, isInVault } from "src/Utility"
   import type AnalysisView from 'src/AnalysisView'
-  import {
-    ANALYSIS_TYPES,
-    ICON,
-    LINKED,
-    MEASURE,
-    NOT_LINKED,
-  } from 'src/Constants'
+  import { ANALYSIS_TYPES, ICON, MEASURE } from 'src/Constants'
   import type {
     GraphAnalysisSettings,
     HITSResult,
@@ -26,25 +21,28 @@
     roundNumber,
   } from 'src/Utility'
   import { onDestroy, onMount } from 'svelte'
-  import FaLink from 'svelte-icons/fa/FaLink.svelte'
-  import InfiniteScroll from 'svelte-infinite-scroll'
+  import InfiniteScroll from './InfiniteScroll.svelte'
   import ExtensionIcon from './ExtensionIcon.svelte'
   import ImgThumbnail from './ImgThumbnail.svelte'
   import SubtypeOptions from './SubtypeOptions.svelte'
 
-  export let app: App
-  export let plugin: GraphAnalysisPlugin
-  export let settings: GraphAnalysisSettings
-  export let view: AnalysisView
-  export let currSubtype: Subtype
+  let { app, plugin, settings, view, currSubtype } = $props<{
+    app: App
+    plugin: GraphAnalysisPlugin
+    settings: GraphAnalysisSettings
+    view: AnalysisView
+    currSubtype: Subtype
+  }>()
 
-  $: currSubtypeInfo = ANALYSIS_TYPES.find((sub) => sub.subtype === currSubtype)
+  let currSubtypeInfo = $derived(
+    ANALYSIS_TYPES.find((sub) => sub.subtype === currSubtype)
+  )
 
-  let sortBy = true
-  let ascOrder = false
-  let { noInfinity, noZero } = settings
-  let excludeLinked = settings.excludeLinked
-  let currFile = app.workspace.getActiveFile()
+  let sortBy = $state(true)
+  let ascOrder = $state(false)
+  let noZero = $state(settings.noZero)
+  let excludeLinked = $state(settings.excludeLinked)
+  let currFile = $state(app.workspace.getActiveFile())
 
   interface ComponentResults {
     authority: number
@@ -54,14 +52,14 @@
     img: Promise<ArrayBuffer> | null
   }
 
-  $: currNode = currFile?.path
+  const currNode = $derived(currFile?.path)
   let size = 50
   let current_component: HTMLElement
-  let newBatch: ComponentResults[] = []
-  let visibleData: ComponentResults[] = []
-  let page = 0
-  let blockSwitch = false
+  let visibleData = $state<ComponentResults[]>([])
+  let page = $state(0)
+  let blockSwitch = $state(false)
   let { resolvedLinks } = app.metadataCache
+  let hasMore = $state(false);
 
   const onLeafChange = () => {
     blockSwitch = true
@@ -69,7 +67,6 @@
       blockSwitch = false
       currFile = app.workspace.getActiveFile()
     }, 100)
-    newBatch = []
   }
 
   onMount(() => {
@@ -81,10 +78,10 @@
     app.workspace.off('active-leaf-change', onLeafChange)
   })
 
-  $: promiseSortedResults = !plugin.g
-    ? null
-    : plugin.g.algs['HITS']('')
-        .then((results: HITSResult) => {
+  const promiseSortedResults = $derived(
+    !plugin.g
+      ? null
+      : plugin.g.algs['HITS']('').then((results: HITSResult) => {
           console.log('hits')
           const componentResults: ComponentResults[] = []
 
@@ -122,15 +119,34 @@
           })
           return componentResults
         })
-        .then((res) => {
-          newBatch = res.slice(0, size)
-          setTimeout(() => {
-            blockSwitch = false
-          }, 100)
-          return res
-        })
+  )
 
-  $: visibleData = [...visibleData, ...newBatch]
+  $effect(async () => {
+    const sorted = await promiseSortedResults
+    if (sorted) {
+      visibleData = sorted.slice(0, size)
+      page = 0
+      hasMore = sorted.length > visibleData.length; // hasMoreを更新
+      setTimeout(() => {
+        blockSwitch = false
+      }, 100)
+    } else {
+      visibleData = []
+      hasMore = false; // hasMoreを更新
+    }
+  })
+
+  async function loadMore() {
+    if (!blockSwitch) {
+      page++
+      const sortedResults = await promiseSortedResults
+      if (sortedResults) {
+        const newBatch = sortedResults.slice(size * page, size * (page + 1) - 1)
+        visibleData = [...visibleData, ...newBatch]
+        hasMore = sortedResults.length > visibleData.length; // hasMoreを更新
+      }
+    }
+  }
 </script>
 
 <SubtypeOptions
@@ -144,9 +160,7 @@
   {plugin}
   {view}
   bind:blockSwitch
-  bind:newBatch
   bind:visibleData
-  bind:promiseSortedResults
   bind:page
 />
 
@@ -164,16 +178,15 @@
         {#each visibleData as node}
           {#if node !== undefined}
             <!-- svelte-ignore a11y-unknown-aria-attribute -->
-            <tr
-              class="
-              {classExt(node.to)}"
-            >
+            <tr class="{classExt(node.to)}">
               <td
-                on:mousedown={async (e) => {
-                  if (e.button === 0 || e.button === 1) await openOrSwitch(app, node.to, e)
+                onmousedown={async (e) => {
+                  if (e.button === 0 || e.button === 1)
+                    await openOrSwitch(app, node.to, e)
                 }}
-                on:contextmenu={(e) => openMenu(e, app, { nodePath: node.to })}
-                on:mouseover={(e) => hoverPreview(e, view, dropPath(node.to))}
+                oncontextmenu={(e) =>
+                  openMenu(e, app, { nodePath: node.to })}
+                onmouseover={(e) => hoverPreview(e, view, dropPath(node.to))}
               >
                 <ExtensionIcon path={node.to} />
 
@@ -196,21 +209,20 @@
 
         <InfiniteScroll
           hasMore={sortedResults.length > visibleData.length}
-          threshold={100}
           elementScroll={current_component.parentNode}
-          on:loadMore={() => {
-            if (!blockSwitch) {
-              page++
-              newBatch = sortedResults.slice(size * page, size * (page + 1) - 1)
-              console.log({ newBatch })
-            }
-          }}
+          onloadMore={loadMore}
         />
-        {visibleData.length} / {sortedResults.length}
       {/key}
     {/await}
   {/if}
 </table>
+{#if promiseSortedResults}
+  {#await promiseSortedResults then sortedResults}
+    <div style="margin-top: 0.5em;">
+      {visibleData.length} / {sortedResults.length}
+    </div>
+  {/await}
+{/if}
 
 <style>
   table.GA-table {

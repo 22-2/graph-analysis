@@ -1,4 +1,5 @@
 import { ItemView, ViewStateResult, WorkspaceLeaf } from 'obsidian'
+import { mount, unmount } from 'svelte'
 import { VIEW_TYPE_GRAPH_ANALYSIS } from 'src/Constants'
 import type { Subtype } from 'src/Interfaces'
 import type GraphAnalysisPlugin from 'src/main'
@@ -7,7 +8,7 @@ import AnalysisComponent from './Components/AnalysisComponent.svelte'
 export default class AnalysisView extends ItemView {
   plugin: GraphAnalysisPlugin
   currSubtype: Subtype
-  component: AnalysisComponent
+  component: ReturnType<typeof mount> | null = null
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -38,7 +39,9 @@ export default class AnalysisView extends ItemView {
   }
 
   onClose(): Promise<void> {
-    this.component?.$destroy()
+    if (this.component) {
+      unmount(this.component)
+    }
     return Promise.resolve()
   }
 
@@ -64,9 +67,11 @@ export default class AnalysisView extends ItemView {
     contentEl.empty()
     contentEl.addClass('GA-View')
 
-    this.component?.$destroy()
+    if (this.component) {
+      unmount(this.component)
+    }
 
-    this.component = new AnalysisComponent({
+    this.component = mount(AnalysisComponent, {
       target: contentEl,
       props: {
         app,

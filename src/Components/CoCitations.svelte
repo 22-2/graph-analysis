@@ -1,8 +1,9 @@
 <script lang="ts">
   import type { App } from 'obsidian'
   import { MarkdownView } from 'obsidian'
-  import { hoverPreview, isLinked } from 'obsidian-community-lib'
+  import { hoverPreview } from 'obsidian-community-lib'
   import type AnalysisView from 'src/AnalysisView'
+  import { isLinked } from "src/Utility"
   import { ANALYSIS_TYPES, ICON, MEASURE, NODE } from 'src/Constants'
   import type {
     CoCitation,
@@ -22,25 +23,29 @@
   } from 'src/Utility'
   import { onDestroy, onMount } from 'svelte'
   import FaLink from 'svelte-icons/fa/FaLink.svelte'
-  import InfiniteScroll from 'svelte-infinite-scroll'
+  import InfiniteScroll from './InfiniteScroll.svelte'
   import ExtensionIcon from './ExtensionIcon.svelte'
   import ImgThumbnail from './ImgThumbnail.svelte'
   import SubtypeOptions from './SubtypeOptions.svelte'
   import debounce from 'lodash.debounce'
   import RenderedMarkdown from './RenderedMarkdown.svelte'
 
-  export let app: App
-  export let plugin: GraphAnalysisPlugin
-  export let settings: GraphAnalysisSettings
-  export let view: AnalysisView
-  export let currSubtype: Subtype
+  let { app, plugin, settings, view, currSubtype } = $props<{
+    app: App
+    plugin: GraphAnalysisPlugin
+    settings: GraphAnalysisSettings
+    view: AnalysisView
+    currSubtype: Subtype
+  }>()
 
-  $: currSubtypeInfo = ANALYSIS_TYPES.find((sub) => sub.subtype === currSubtype)
+  let currSubtypeInfo = $derived(
+    ANALYSIS_TYPES.find((sub) => sub.subtype === currSubtype)
+  )
 
-  let frozen = false
-  let ascOrder = false
-  let excludeLinked = settings.excludeLinked
-  let currFile = app.workspace.getActiveFile()
+  let frozen = $state(false)
+  let ascOrder = $state(false)
+  let excludeLinked = $state(settings.excludeLinked)
+  let currFile = $state(app.workspace.getActiveFile())
 
   interface ComponentResult {
     to: string
@@ -51,69 +56,82 @@
     img: Promise<ArrayBuffer> | null
   }
 
-  $: currNode = currFile?.path
+  const currNode = $derived(currFile?.path)
   let size = 50
   let current_component: HTMLElement
-  let newBatch: ComponentResult[] = []
-  let visibleData: ComponentResult[] = []
-  let page = 0
-  let blockSwitch = false
+  let visibleData = $state<ComponentResult[]>([])
+  let page = $state(0)
+  let blockSwitch = $state(false)
+  let hasMore = $state(false);
 
   let { resolvedLinks } = app.metadataCache
 
-  $: promiseSortedResults =
+  const promiseSortedResults = $derived(
     !plugin.g || !currNode
       ? null
-      : plugin.g.algs['Co-Citations'](currNode)
-          .then((results: CoCitationMap) => {
-            const componentResults: ComponentResult[] = []
-            const greater = ascOrder ? 1 : -1
-            const lesser = ascOrder ? -1 : 1
+      : plugin.g.algs['Co-Citations'](currNode).then((results: CoCitationMap) => {
+          const componentResults: ComponentResult[] = []
+          const greater = ascOrder ? 1 : -1
+          const lesser = ascOrder ? -1 : 1
 
-            for (const to in results) {
-              const result = results[to]
-              const linked = isLinked(resolvedLinks, currNode, to, false)
-              if (!(excludeLinked && linked)) {
-                componentResults.push({
-                  to,
-                  measure: result.measure,
-                  resolved: result.resolved,
-                  coCitations: result.coCitations.sort(
-                    (a, b) => b.measure - a.measure
-                  ),
-                  linked,
-                  img:
-                    plugin.settings.showImgThumbnails && isImg(to)
-                      ? getImgBufferPromise(app, to)
-                      : null,
-                })
-              }
+          for (const to in results) {
+            const result = results[to]
+            const linked = isLinked(resolvedLinks, currNode, to, false)
+            if (!(excludeLinked && linked)) {
+              componentResults.push({
+                to,
+                measure: result.measure,
+                resolved: result.resolved,
+                coCitations: result.coCitations.sort(
+                  (a, b) => b.measure - a.measure
+                ),
+                linked,
+                img:
+                  plugin.settings.showImgThumbnails && isImg(to)
+                    ? getImgBufferPromise(app, to)
+                    : null,
+              })
             }
-            componentResults.sort((a, b) =>
-              a.measure > b.measure ? greater : lesser
-            )
-            return componentResults
-          })
-          .then((res) => {
-            newBatch = res.slice(0, size)
-            setTimeout(() => {
-              blockSwitch = false
-            }, 100)
-            return res
-          })
+          }
+          componentResults.sort((a, b) =>
+            a.measure > b.measure ? greater : lesser
+          )
+          return componentResults
+        })
+  )
 
-  $: visibleData = [...visibleData, ...newBatch]
+  $effect(async () => {
+    const sorted = await promiseSortedResults
+    if (sorted) {
+      visibleData = sorted.slice(0, size)
+      page = 0
+      hasMore = sorted.length > visibleData.length; // hasMoreを更新
+      setTimeout(() => {
+        blockSwitch = false
+      }, 100)
+    } else {
+      visibleData = []
+      hasMore = false; // hasMoreを更新
+    }
+  })
+
+  async function loadMore() {
+    if (!blockSwitch) {
+      page++
+      const sortedResults = await promiseSortedResults
+      if (sortedResults) {
+        const newBatch = sortedResults.slice(size * page, size * (page + 1) - 1)
+        visibleData = [...visibleData, ...newBatch]
+        hasMore = sortedResults.length > visibleData.length; // hasMoreを更新
+      }
+    }
+  }
 
   const onMetadataChange = async () => {
     if (!current_component.checkVisibility()) {
       return
     }
     if (!frozen) {
-      blockSwitch = true
-      newBatch = []
-      visibleData = []
-      promiseSortedResults = null
-      page = 0
       setTimeout(() => (currFile = app.workspace.getActiveFile()), 100)
       await plugin.refreshGraph()
       await view.draw(currSubtypeInfo!.subtype)
@@ -128,11 +146,6 @@
     if (pathEq) return
 
     if (!frozen) {
-      blockSwitch = true
-      newBatch = []
-      visibleData = []
-      promiseSortedResults = null
-      page = 0
       setTimeout(() => (currFile = app.workspace.getActiveFile()), 100)
     }
     console.count('cocitations leaf change')
@@ -142,7 +155,6 @@
 
   onMount(() => {
     currFile = app.workspace.getActiveFile()
-    currNode = currFile?.path
     app.workspace.on('active-leaf-change', onLeafChange)
     app.metadataCache.on('changed', debouncedMetadataChange)
   })
@@ -151,10 +163,8 @@
     app.workspace.off('active-leaf-change', onLeafChange)
     app.metadataCache.off('changed', debouncedMetadataChange)
     // Clear state
-    newBatch = []
     visibleData = []
-    promiseSortedResults = null
-    currNode = undefined
+    currFile = null
   })
 </script>
 
@@ -168,9 +178,7 @@
   {plugin}
   {view}
   bind:blockSwitch
-  bind:newBatch
   bind:visibleData
-  bind:promiseSortedResults
   bind:page
 />
 
@@ -184,17 +192,18 @@
               <details class="tree-item-self">
                 <summary
                   class="tree-item-inner"
-                  on:contextmenu={(e) => openMenu(e, app, { nodePath: node.to })}
+                  oncontextmenu={(e) => openMenu(e, app, { nodePath: node.to })}
                 >
                   <span class="top-row">
                     <!-- svelte-ignore a11y-mouse-events-have-key-events -->
                     <!-- svelte-ignore a11y-no-static-element-interactions -->
                     <span
-                      on:mousedown={async (e) => {
+                      onmousedown={async (e) => {
                         if (e.button === 0 || e.button === 1)
                           await openOrSwitch(app, node.to, e)
                       }}
-                      on:mouseover={(e) => hoverPreview(e, view, dropPath(node.to))}
+                      onmouseover={(e) =>
+                        hoverPreview(e, view, dropPath(node.to))}
                     >
                       {#if node.linked}
                         <span class={ICON}><FaLink /></span>
@@ -222,11 +231,11 @@
                       <!-- svelte-ignore a11y-no-static-element-interactions -->
                       <span
                         class="internal-link"
-                        on:mousedown={async (e) => {
+                        onmousedown={async (e) => {
                           if (e.button === 0 || e.button === 1)
                             await openOrSwitch(app, citation.source, e)
                         }}
-                        on:mouseover={(e) =>
+                        onmouseover={(e) =>
                           hoverPreview(e, view, dropPath(citation.source))}
                       >
                         {presentPath(citation.source)}
@@ -249,15 +258,8 @@
 
         <InfiniteScroll
           hasMore={sortedResults.length > visibleData.length}
-          threshold={100}
           elementScroll={current_component.parentNode}
-          on:loadMore={() => {
-            if (!blockSwitch) {
-              page++
-              newBatch = sortedResults.slice(size * page, size * (page + 1) - 1)
-              console.log({ newBatch })
-            }
-          }}
+          onloadMore={loadMore}
         />
         {visibleData.length} / {sortedResults.length}
       {/key}

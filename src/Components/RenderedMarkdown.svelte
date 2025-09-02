@@ -4,12 +4,13 @@
   import { App, MarkdownRenderer, Component } from 'obsidian'
   import { jumpToSelection, openOrSwitch } from 'src/Utility'
 
-  export let sentence: string[]
-  export let sourcePath: string
-  export let app: App
-  export let line: number
-  // component プロパティを追加
-  export let component: Component
+  let { sentence, sourcePath, app, line, component } = $props<{
+    sentence: string[]
+    sourcePath: string
+    app: App
+    line: number
+    component: Component
+  }>()
 
   let renderedSentence = sentence[0] + '==' + sentence[1] + '==' + sentence[2]
   if (sentence.length === 5) {
@@ -25,11 +26,11 @@
     for (let markedEl of el.getElementsByTagName('mark')) {
       markedEl.classList.add('CC-mark')
     }
-    for(let markedEl:HTMLElement of el.getElementsByTagName("ol")) {
-      markedEl.classList.add("CC-edit")
+    for (let markedEl: HTMLElement of el.getElementsByTagName('ol')) {
+      markedEl.classList.add('CC-edit')
     }
-    for(let markedEl:HTMLElement of el.getElementsByTagName("hr")) {
-      markedEl.classList.add("CC-hr")
+    for (let markedEl: HTMLElement of el.getElementsByTagName('hr')) {
+      markedEl.classList.add('CC-hr')
     }
   })
 </script>
@@ -37,7 +38,7 @@
 <div
   class="CC-sentence"
   bind:this={el}
-  on:mousedown={async (e) => {
+  onmousedown={async (e) => {
     if (e.button === 0 || e.button === 1) {
       await openOrSwitch(app, sourcePath, e)
       jumpToSelection(app, line, sentence.join(''))
