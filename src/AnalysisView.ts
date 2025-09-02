@@ -1,4 +1,4 @@
-import { ItemView, ViewStateResult, WorkspaceLeaf } from 'obsidian'
+import { ItemView, type ViewStateResult, WorkspaceLeaf } from 'obsidian'
 import { mount, unmount } from 'svelte'
 import { VIEW_TYPE_GRAPH_ANALYSIS } from 'src/Constants'
 import type { Subtype } from 'src/Interfaces'

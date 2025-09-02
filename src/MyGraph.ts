@@ -7,16 +7,16 @@ import betweenness from 'graphology-metrics/centrality/betweenness'
 
 import {
   App,
-  CacheItem,
-  HeadingCache,
-  ListItemCache,
+  type CacheItem,
+  type HeadingCache,
+  type ListItemCache,
   Notice,
-  ReferenceCache,
-  TagCache,
+  type ReferenceCache,
+  type TagCache,
   getAllTags,
   getLinkpath,
   TFile,
-  CachedMetadata,
+  type CachedMetadata,
 } from 'obsidian'
 import tokenizer from 'sbd'
 import {
