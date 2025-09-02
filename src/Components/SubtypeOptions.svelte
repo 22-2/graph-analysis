@@ -45,7 +45,11 @@
 
 <span class="GA-Subtype-Options">
   {#if currSubtypeInfo}
-    <InfoIcon {currSubtypeInfo} />
+    <span class="GA-Option-span">
+      <span class="icon">
+        <InfoIcon {currSubtypeInfo} />
+      </span>
+    </span>
   {/if}
 
   {#if excludeLinked !== undefined}
@@ -166,8 +170,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     cursor: pointer;
   }
 
