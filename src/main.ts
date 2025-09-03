@@ -89,18 +89,18 @@ export default class GraphAnalysisPlugin extends Plugin {
       },
     })
 
-    ANALYSIS_TYPES.forEach((sub) => {
-      this.addCommand({
-        id: `open-${sub.subtype}`,
-        name: `Open ${getAlgorithmDisplayName(sub.subtype, this.settings)}`,
-        callback: async () => {
-          const view = await this.getCurrentView(true) // 存在しない場合は開く
-          if (view) {
-            await view.draw(sub.subtype)
-          }
-        },
-      })
-    })
+    // ANALYSIS_TYPES.forEach((sub) => {
+    //   this.addCommand({
+    //     id: `open-${sub.subtype}`,
+    //     name: `Open ${getAlgorithmDisplayName(sub.subtype, this.settings)}`,
+    //     callback: async () => {
+    //       const view = await this.getCurrentView(true) // 存在しない場合は開く
+    //       if (view) {
+    //         await view.draw(sub.subtype)
+    //       }
+    //     },
+    //   })
+    // })
   }
 
   /**
@@ -123,10 +123,19 @@ export default class GraphAnalysisPlugin extends Plugin {
       // これはより信頼性が高く効率的
       this.registerEvent(
         this.app.metadataCache.on('resolved', () => {
-          this.initializeGraphAndViews()
+          if (this.checkGAViewVisibility()) {
+            this.initializeGraphAndViews()
+          }
         })
       )
     })
+  }
+
+  private checkGAViewVisibility() {
+    const view = this.app.workspace
+      .getLeavesOfType(VIEW_TYPE_GRAPH_ANALYSIS)
+      .first()?.view as AnalysisView
+    return view?.contentEl.checkVisibility()
   }
 
   // --- コアロジック ---
