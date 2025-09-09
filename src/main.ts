@@ -1,7 +1,6 @@
-import { addIcon, Notice, Plugin, WorkspaceLeaf, TAbstractFile } from 'obsidian'
+import { addIcon, Notice, Plugin, WorkspaceLeaf } from 'obsidian'
 import AnalysisView from 'src/AnalysisView'
 import {
-  ANALYSIS_TYPES,
   DEFAULT_SETTINGS,
   iconSVG,
   VIEW_TYPE_GRAPH_ANALYSIS,
@@ -9,7 +8,7 @@ import {
 import type { GraphAnalysisSettings } from 'src/Interfaces'
 import MyGraph from 'src/MyGraph'
 import { SampleSettingTab } from 'src/Settings'
-import { debug, getAlgorithmDisplayName, openView } from './Utility'
+import { debug, openView } from './Utility'
 
 export default class GraphAnalysisPlugin extends Plugin {
   settings!: GraphAnalysisSettings
@@ -55,7 +54,7 @@ export default class GraphAnalysisPlugin extends Plugin {
   private setupUI() {
     addIcon('GA-ICON', iconSVG)
     this.addRibbonIcon('GA-ICON', 'Open Graph Analysis View', async () => {
-      await this.openAnalysisView()
+      await this.activateAnalysisView()
     })
   }
 
@@ -73,7 +72,7 @@ export default class GraphAnalysisPlugin extends Plugin {
           0
         if (!viewExists) {
           if (!checking) {
-            this.openAnalysisView()
+            this.activateAnalysisView()
           }
           return true
         }
@@ -197,7 +196,7 @@ export default class GraphAnalysisPlugin extends Plugin {
       }
     } else {
       // ビューが開かれていない場合、新しいビューを開く
-      await this.openAnalysisView()
+      await this.activateAnalysisView()
     }
   }
 
@@ -205,8 +204,17 @@ export default class GraphAnalysisPlugin extends Plugin {
    * 分析ビューを開きます。
    * @returns 開かれた、またはアクティブになったAnalysisViewのインスタンス
    */
-  public async openAnalysisView(): Promise<AnalysisView> {
-    return openView(this.app, VIEW_TYPE_GRAPH_ANALYSIS, AnalysisView)
+  public async activateAnalysisView(): Promise<AnalysisView> {
+    const view = await openView(
+      this.app,
+      VIEW_TYPE_GRAPH_ANALYSIS,
+      AnalysisView
+    )
+    if (this.app.workspace.rightSplit.collapsed) {
+      this.app.workspace.rightSplit.expand()
+    }
+    this.initializeGraphAndViews()
+    return view
   }
 
   /**
@@ -224,7 +232,7 @@ export default class GraphAnalysisPlugin extends Plugin {
     }
 
     if (openIfNot) {
-      return this.openAnalysisView()
+      return this.activateAnalysisView()
     }
 
     return null
