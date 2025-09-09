@@ -135,7 +135,7 @@ export default class GraphAnalysisPlugin extends Plugin {
     const view = this.app.workspace
       .getLeavesOfType(VIEW_TYPE_GRAPH_ANALYSIS)
       .first()?.view as AnalysisView
-    return view?.contentEl.checkVisibility()
+    return view?.contentEl?.checkVisibility()
   }
 
   // --- コアロジック ---
