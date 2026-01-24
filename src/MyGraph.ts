@@ -158,6 +158,10 @@ export default class MyGraph extends Graph {
       ResultMap | CoCitationMap | Communities | string[] | HITSResult
     >
   } = {
+    // Random: async (a :string) => {
+    //   sampleSize(this.nodes(), 50)
+    // },
+
     Jaccard: async (a: string): Promise<ResultMap> => {
       const results: ResultMap = {}
       const Na = this.getNeighborsSafe(a)

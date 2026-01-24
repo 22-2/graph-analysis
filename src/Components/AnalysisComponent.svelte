@@ -84,7 +84,12 @@
 
     switch (currSubtype) {
       case 'HITS': {
-        const results: HITSResult = await plugin.g.algs['HITS']('')
+        const cacheKey = `HITS:`
+        let results: HITSResult = plugin.analysisCache.get(cacheKey)
+        if (!results) {
+          results = await plugin.g.algs['HITS']('')
+          plugin.analysisCache.set(cacheKey, results)
+        }
         const componentResults: any[] = []
         plugin.g.forEachNode((to) => {
           const authority = roundNumber(results.authorities[to])
@@ -103,7 +108,12 @@
         return componentResults.sort((a, b) => (sortBy ? (a.authority > b.authority ? greater : lesser) : a.hub > b.hub ? greater : lesser))
       }
       case 'Co-Citations': {
-        const results: CoCitationMap = await plugin.g.algs['Co-Citations'](currNode)
+        const cacheKey = `Co-Citations:${currNode}`
+        let results: CoCitationMap = plugin.analysisCache.get(cacheKey)
+        if (!results) {
+          results = await plugin.g.algs['Co-Citations'](currNode)
+          plugin.analysisCache.set(cacheKey, results)
+        }
         const componentResults: any[] = []
         for (const to in results) {
           const result = results[to]
@@ -122,7 +132,12 @@
         return componentResults.sort((a, b) => (a.measure > b.measure ? greater : lesser))
       }
       case 'Louvain': {
-        const results: string[] = await plugin.g.algs['Louvain'](currNode, { resolution })
+        const cacheKey = `Louvain:${currNode}:${resolution}`
+        let results: string[] = plugin.analysisCache.get(cacheKey)
+        if (!results) {
+          results = await plugin.g.algs['Louvain'](currNode, { resolution })
+          plugin.analysisCache.set(cacheKey, results)
+        }
         return results
           .map(to => ({
             to,
@@ -133,7 +148,12 @@
           .filter(node => !(excludeLinked && node.linked))
       }
       case 'Label Propagation': {
-        const comms: Communities = await plugin.g.algs[currSubtype]('', { iterations: its })
+        const cacheKey = `Label Propagation::${its}`
+        let comms: Communities = plugin.analysisCache.get(cacheKey)
+        if (!comms) {
+          comms = await plugin.g.algs[currSubtype]('', { iterations: its })
+          plugin.analysisCache.set(cacheKey, comms)
+        }
         const componentResults: any[] = []
         Object.keys(comms).forEach((label) => {
           let comm = comms[label]
@@ -144,7 +164,12 @@
         return componentResults.sort((a, b) => (a.comm.length > b.comm.length ? greater : lesser))
       }
       default: { // For all TableComponent types
-        const results: ResultMap = await plugin.g.algs[currSubtype](currNode)
+        const cacheKey = `${currSubtype}:${currNode}`
+        let results: ResultMap = plugin.analysisCache.get(cacheKey)
+        if (!results) {
+          results = await plugin.g.algs[currSubtype](currNode)
+          plugin.analysisCache.set(cacheKey, results)
+        }
         const componentResults: any[] = []
         plugin.g.forEachNode((to) => {
           const { measure, extra } = results[to]

@@ -1,4 +1,5 @@
 import { addIcon, Notice, Plugin, WorkspaceLeaf } from 'obsidian'
+import { LRUCache } from 'lru-cache'
 import AnalysisView from 'src/AnalysisView'
 import {
   DEFAULT_SETTINGS,
@@ -13,11 +14,19 @@ import { debug, openView } from './Utility'
 export default class GraphAnalysisPlugin extends Plugin {
   settings!: GraphAnalysisSettings
   g!: MyGraph
+  private pendingRefresh = false
+  private analysisCache!: LRUCache<string, any>
 
   async onload() {
     console.log('loading graph analysis plugin')
 
     await this.loadSettings()
+
+    // キャッシュを初期化（最大100エントリ、30分間有効）
+    this.analysisCache = new LRUCache({
+      max: 100,
+      ttl: 1000 * 60 * 30,
+    })
 
     this.setupUI()
     this.registerCommands()
@@ -122,19 +131,35 @@ export default class GraphAnalysisPlugin extends Plugin {
       // これはより信頼性が高く効率的
       this.registerEvent(
         this.app.metadataCache.on('resolved', () => {
-          if (this.checkGAViewVisibility()) {
-            this.initializeGraphAndViews()
-          }
+          this.tryExecutePendingRefresh()
+        })
+      )
+
+      // ビューの表示/非表示を監視
+      this.registerEvent(
+        this.app.workspace.on('active-leaf-change', () => {
+          this.tryExecutePendingRefresh()
         })
       )
     })
+  }
+
+  /**
+   * ビューが表示されている場合はrefreshを実行、非表示の場合はpendingをセット
+   */
+  private tryExecutePendingRefresh() {
+    if (this.checkGAViewVisibility()) {
+      this.initializeGraphAndViews()
+    } else {
+      this.pendingRefresh = true
+    }
   }
 
   private checkGAViewVisibility() {
     const view = this.app.workspace
       .getLeavesOfType(VIEW_TYPE_GRAPH_ANALYSIS)
       .first()?.view as AnalysisView
-    return view?.contentEl?.checkVisibility()
+    return view?.leaf.isVisible()
   }
 
   // --- コアロジック ---
@@ -153,7 +178,7 @@ export default class GraphAnalysisPlugin extends Plugin {
    */
   public async refreshGraphAndViews() {
     await this.refreshGraph()
-    const view = await this.getCurrentView(false) // 存在しない場合は開かない
+    const view = this.getCurrentView(false) // 存在しない場合は開かない
     if (view) {
       await view.draw(view.currSubtype)
     }
@@ -164,11 +189,19 @@ export default class GraphAnalysisPlugin extends Plugin {
    */
   public async refreshGraph() {
     try {
-      console.time('Initialise Graph')
+      if (this.settings.debugMode) console.time('Initialise Graph')
+      const oldGraphHash = this.g ? `${this.g.order}:${this.g.size}` : ''
       this.g = new MyGraph(this.app, this.settings)
       await this.g.initGraph()
+      const newGraphHash = `${this.g.order}:${this.g.size}`
+
+      // グラフの構造が実際に変わった場合だけキャッシュをクリアするっす
+      if (oldGraphHash !== newGraphHash) {
+        this.analysisCache.clear()
+      }
+
       debug(this.settings, { graph: this.g })
-      console.timeEnd('Initialise Graph')
+      if (this.settings.debugMode) console.timeEnd('Initialise Graph')
     } catch (error) {
       console.error('Graph Analysis Error:', error)
       new Notice(
@@ -205,7 +238,7 @@ export default class GraphAnalysisPlugin extends Plugin {
    * @returns 開かれた、またはアクティブになったAnalysisViewのインスタンス
    */
   public async activateAnalysisView(): Promise<AnalysisView> {
-    const view = await openView(
+    await openView(
       this.app,
       VIEW_TYPE_GRAPH_ANALYSIS,
       AnalysisView
@@ -213,7 +246,11 @@ export default class GraphAnalysisPlugin extends Plugin {
     if (this.app.workspace.rightSplit.collapsed) {
       this.app.workspace.rightSplit.expand()
     }
-    this.initializeGraphAndViews()
+    this.tryExecutePendingRefresh()
+    const view = this.getCurrentView(false)
+    if (!view) {
+      throw new Error('Failed to activate Analysis View')
+    }
     return view
   }
 
@@ -222,7 +259,7 @@ export default class GraphAnalysisPlugin extends Plugin {
    * @param openIfNot - trueの場合、ビューが存在しなければ新しく開きます。
    * @returns AnalysisViewのインスタンス、または見つからずopenIfNotがfalseの場合はnull。
    */
-  public async getCurrentView(openIfNot = true): Promise<AnalysisView | null> {
+  public getCurrentView(openIfNot = true): AnalysisView | null {
     const leaf = this.app.workspace.getLeavesOfType(
       VIEW_TYPE_GRAPH_ANALYSIS
     )?.[0]
@@ -232,7 +269,7 @@ export default class GraphAnalysisPlugin extends Plugin {
     }
 
     if (openIfNot) {
-      return this.activateAnalysisView()
+      this.activateAnalysisView()
     }
 
     return null
