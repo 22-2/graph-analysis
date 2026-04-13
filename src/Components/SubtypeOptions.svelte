@@ -53,7 +53,7 @@
     >
       <span class="icon">
         {#if excludeLinked}
-          <ObsidianIcon iconName="link-2-off" />
+          <ObsidianIcon iconName="unlink" />
         {:else}
           <ObsidianIcon iconName="link" />
         {/if}
