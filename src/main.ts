@@ -14,7 +14,6 @@ import { debug, openView } from './Utility'
 export default class GraphAnalysisPlugin extends Plugin {
   settings!: GraphAnalysisSettings
   g!: MyGraph
-  private pendingRefresh = false
   private analysisCache!: LRUCache<string, any>
 
   async onload() {
@@ -150,8 +149,6 @@ export default class GraphAnalysisPlugin extends Plugin {
   private tryExecutePendingRefresh() {
     if (this.checkGAViewVisibility()) {
       this.initializeGraphAndViews()
-    } else {
-      this.pendingRefresh = true
     }
   }
 
