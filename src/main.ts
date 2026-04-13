@@ -21,18 +21,20 @@ export default class GraphAnalysisPlugin extends Plugin {
 
     await this.loadSettings()
 
-    // キャッシュを初期化（最大100エントリ、30分間有効）
-    this.analysisCache = new AnalysisCache({
-      max: 100,
-      ttl: 1000 * 60 * 30,
-    })
+    this.app.workspace.onLayoutReady(() => {
+      // キャッシュを初期化（最大100エントリ、30分間有効）
+      this.analysisCache = new AnalysisCache({
+        max: 500,
+        ttl: 1000 * 60 * 30,
+      })
 
-    this.setupUI()
-    this.registerCommands()
-    this.registerViews()
+      this.setupUI()
+      this.registerCommands()
+      this.registerViews()
 
-    // ワークスペースの準備が整い、メタデータが解決された後にグラフを初期化
-    this.handleLayoutReady()
+      // ワークスペースの準備が整い、メタデータが解決された後にグラフを初期化
+      this.handleLayoutReady()
+    });
   }
 
   onunload() {
