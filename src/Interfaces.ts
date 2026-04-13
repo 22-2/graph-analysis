@@ -62,8 +62,37 @@ export interface ComponentResults {
   linked: boolean
   to: string
   resolved: boolean
-  extra: any
+  extra: string[]
   img: Promise<ArrayBuffer> | null
+}
+
+export interface HITSComponentResult {
+  authority: number
+  hub: number
+  to: string
+  resolved: boolean
+  img: Promise<ArrayBuffer> | null
+}
+
+export interface CoCitationComponentResult {
+  to: string
+  measure: number
+  resolved: boolean
+  coCitations: CoCitation[]
+  linked: boolean
+  img: Promise<ArrayBuffer> | null
+}
+
+export interface LouvainComponentResult {
+  to: string
+  linked: boolean
+  resolved: boolean
+  img: Promise<ArrayBuffer> | null
+}
+
+export interface LabelPropagationComponentResult {
+  label: string
+  comm: string[]
 }
 
 export interface CoCitation {

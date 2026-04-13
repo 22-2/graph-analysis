@@ -5,7 +5,13 @@
   import type AnalysisView from 'src/AnalysisView'
   import { ANALYSIS_TYPES } from 'src/Constants'
   import type {
+    CoCitationComponentResult,
     GraphAnalysisSettings,
+    HITSComponentResult,
+    LabelPropagationComponentResult,
+    LouvainComponentResult,
+    ComponentResults,
+    ResultMap,
     Subtype,
   } from 'src/Interfaces'
   import type GraphAnalysisPlugin from 'src/main'
@@ -75,7 +81,7 @@
   let currFile      = $state<TFile | undefined>(initCurrFile)
 
   // 無限スクロール用
-  let visibleData     = $state<any[]>([])
+  let visibleData     = $state<AnyComponentResult[]>([])
   let page            = $state(0)
   let hasMore         = $state(false)
   let blockSwitch     = $state(false)
@@ -85,9 +91,12 @@
   // Derived
   // ---------------------------------------------------------------------------
 
-  const currSubtypeInfo = $derived(
+  let currSubtypeInfo = $state(
     ANALYSIS_TYPES.find((s) => s.subtype === currSubtype)
   )
+  $effect(() => {
+    currSubtypeInfo = ANALYSIS_TYPES.find((s) => s.subtype === currSubtype)
+  })
   const currNode       = $derived(currFile?.path)
   const resolvedLinks  = $derived(app.metadataCache.resolvedLinks)
   const noInfinity     = $derived(settings.noInfinity)
@@ -116,7 +125,7 @@
   // Algorithm result builders
   // ---------------------------------------------------------------------------
 
-  async function buildHITSResults(): Promise<any[]> {
+  async function buildHITSResults(): Promise<HITSComponentResult[]> {
     let results = plugin.analysisCache.getHITS()
     if (!results) {
       results = await plugin.g.algs['HITS']!('')
@@ -124,7 +133,7 @@
     }
 
     const { greater, lesser } = sortDirection
-    const out: any[] = []
+    const out: HITSComponentResult[] = []
 
     plugin.g.forEachNode((to: string) => {
       const authority = roundNumber(results!.authorities[to])
@@ -141,7 +150,7 @@
     )
   }
 
-  async function buildCoCitationResults(): Promise<any[]> {
+  async function buildCoCitationResults(): Promise<CoCitationComponentResult[]> {
     const node = currNode ?? ''
     let results = plugin.analysisCache.getCoCitations(node)
     if (!results) {
@@ -150,7 +159,7 @@
     }
 
     const { greater, lesser } = sortDirection
-    const out: any[] = []
+    const out: CoCitationComponentResult[] = []
 
     for (const to in results) {
       if (excludeLinked && isNodeLinked(to)) continue
@@ -168,7 +177,7 @@
     return out.sort((a, b) => (a.measure > b.measure ? greater : lesser))
   }
 
-  async function buildLouvainResults(): Promise<any[]> {
+  async function buildLouvainResults(): Promise<LouvainComponentResult[]> {
     const node = currNode ?? ''
     let results = plugin.analysisCache.getLouvain(node, resolution)
     if (!results) {
@@ -177,16 +186,16 @@
     }
 
     return results
-      .map((to: string) => ({
+      .map((to: string): LouvainComponentResult => ({
         to,
         linked:   isNodeLinked(to),
         resolved: isResolved(to),
         img:      imgFor(to),
       }))
-      .filter((n: any) => !(excludeLinked && n.linked))
+      .filter((n) => !(excludeLinked && n.linked))
   }
 
-  async function buildLabelPropagationResults(): Promise<any[]> {
+  async function buildLabelPropagationResults(): Promise<LabelPropagationComponentResult[]> {
     const { greater, lesser } = sortDirection
     let comms = plugin.analysisCache.getLabelPropagation(its)
     if (!comms) {
@@ -196,23 +205,21 @@
     if (!comms) return []
 
     return Object.entries(comms)
-      .filter(([, comm]) => (comm as string[]).length > 1)
-      .map(([label, comm]) => ({ label, comm }))
-      .sort((a, b) =>
-        (a.comm as string[]).length > (b.comm as string[]).length ? greater : lesser
-      )
+      .filter(([, comm]) => comm.length > 1)
+      .map(([label, comm]): LabelPropagationComponentResult => ({ label, comm }))
+      .sort((a, b) => a.comm.length > b.comm.length ? greater : lesser)
   }
 
-  async function buildTableResults(): Promise<any[]> {
+  async function buildTableResults(): Promise<ComponentResults[]> {
     const node = currNode ?? ''
-    let results = plugin.analysisCache.getResultMap(currSubtype, node)
+    let results: ResultMap | undefined = plugin.analysisCache.getResultMap(currSubtype, node)
     if (!results) {
-      results = await plugin.g.algs[currSubtype]!(node)
+      results = await plugin.g.algs[currSubtype]!(node) as ResultMap
       plugin.analysisCache.setResultMap(currSubtype, node, results)
     }
 
     const { greater, lesser } = sortDirection
-    const out: any[] = []
+    const out: ComponentResults[] = []
 
     plugin.g.forEachNode((to: string) => {
       const { measure, extra } = results![to]
@@ -233,7 +240,14 @@
   // Core derived promise
   // ---------------------------------------------------------------------------
 
-  const promiseSortedResults = $derived((async (): Promise<any[] | null> => {
+  type AnyComponentResult =
+    | HITSComponentResult
+    | CoCitationComponentResult
+    | LouvainComponentResult
+    | LabelPropagationComponentResult
+    | ComponentResults
+
+  const promiseSortedResults = $derived((async (): Promise<AnyComponentResult[] | null> => {
     if (!plugin.g || (!currNode && !currSubtypeInfo?.global)) return null
 
     switch (currSubtype) {
