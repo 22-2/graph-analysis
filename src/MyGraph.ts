@@ -119,34 +119,19 @@ export default class MyGraph extends Graph {
 
   // --- エラーハンドリングを強化したヘルパーメソッドっす ---
 
-  /**
-   * ノードが存在しない場合でも安全に隣接ノードを取得するっす
-   * @param node ノード名
-   * @returns 隣接ノードの配列
-   */
   private getNeighborsSafe(node: string): string[] {
-    try {
-      return this.hasNode(node) ? this.neighbors(node) : []
-    } catch (e) {
-      if (e instanceof NotFoundGraphError) {
-        return []
-      }
-      throw e
-    }
+    return this.getSafeNodes(node, () => this.neighbors(node))
   }
 
-  /**
-   * ノードが存在しない場合でも安全に入力元の隣接ノードを取得するっす
-   * @param node ノード名
-   * @returns 入力元隣接ノードの配列
-   */
   private getInNeighborsSafe(node: string): string[] {
+    return this.getSafeNodes(node, () => this.inNeighbors(node))
+  }
+
+  private getSafeNodes(node: string, fn: () => string[]): string[] {
     try {
-      return this.hasNode(node) ? this.inNeighbors(node) : []
+      return this.hasNode(node) ? fn() : []
     } catch (e) {
-      if (e instanceof NotFoundGraphError) {
-        return []
-      }
+      if (e instanceof NotFoundGraphError) return []
       throw e
     }
   }
@@ -178,33 +163,17 @@ export default class MyGraph extends Graph {
       return results
     },
 
-    HITS: async (a: string) => {
+    HITS: async (_a: string) => {
       // HITSアルゴリズムは収束しないことがあるので、最大イテレーションを指定するっす
       return hits(this, { maxIterations: 300 })
     },
 
-    PageRank: async (a: string): Promise<ResultMap> => {
-      const ranks = pageRank(this)
-      const results: ResultMap = {}
-      this.forEachNode((node) => {
-        results[node] = {
-          measure: ranks[node] ? roundNumber(ranks[node]) : 0,
-          extra: [],
-        }
-      })
-      return results
+    PageRank: async (_a: string): Promise<ResultMap> => {
+      return this.scoreMapFromNodeValues(pageRank(this))
     },
 
-    'Betweenness Centrality': async (a: string): Promise<ResultMap> => {
-      const centrality = betweenness(this)
-      const results: ResultMap = {}
-      this.forEachNode((node) => {
-        results[node] = {
-          measure: centrality[node] ? roundNumber(centrality[node]) : 0,
-          extra: [],
-        }
-      })
-      return results
+    'Betweenness Centrality': async (_a: string): Promise<ResultMap> => {
+      return this.scoreMapFromNodeValues(betweenness(this))
     },
 
     Overlap: async (a: string): Promise<ResultMap> => {
@@ -363,7 +332,7 @@ export default class MyGraph extends Graph {
       return currComm
     },
 
-    'Clustering Coefficient': async (a: string): Promise<ResultMap> => {
+    'Clustering Coefficient': async (_a: string): Promise<ResultMap> => {
       const results: ResultMap = {}
 
       this.forEachNode((to: string) => {
@@ -378,6 +347,25 @@ export default class MyGraph extends Graph {
   }
 
   // --- Co-Citations のためのヘルパーメソッド群っす ---
+
+  /** ある行のアイテム位置から [前, アイテム, 後] の3要素センテンスを作るっす */
+  private buildSentence(lines: string[], item: CacheItem): string[] {
+    const line = lines[item.position.start.line]
+    return [
+      line.slice(0, item.position.start.col),
+      line.slice(item.position.start.col, item.position.end.col),
+      line.slice(item.position.end.col),
+    ]
+  }
+
+  /** ノードスコアマップ（{ [node]: number }）を ResultMap に変換するっす */
+  private scoreMapFromNodeValues(scores: { [node: string]: number }): ResultMap {
+    const results: ResultMap = {}
+    this.forEachNode((node) => {
+      results[node] = { measure: scores[node] ? roundNumber(scores[node]) : 0, extra: [] }
+    })
+    return results
+  }
 
   /**
    * ターゲットノート('a')に関する情報をファイル内から抽出するっす
@@ -570,12 +558,7 @@ export default class MyGraph extends Graph {
       return
 
     // どのコンテキストにも当てはまらない場合、最低スコアを付与するっす
-    const lineContent = lines[item.position.start.line]
-    const sentence = [
-      lineContent.slice(0, item.position.start.col),
-      lineContent.slice(item.position.start.col, item.position.end.col),
-      lineContent.slice(item.position.end.col),
-    ]
+    const sentence = this.buildSentence(lines, item)
     addPreCocitation(
       preCocitations,
       linkPath,
@@ -677,12 +660,7 @@ export default class MyGraph extends Graph {
     if (!listItem) return false
 
     let found = false
-    const lineContent = lines[item.position.start.line]
-    const sentence = [
-      lineContent.slice(0, item.position.start.col),
-      lineContent.slice(item.position.start.col, item.position.end.col),
-      lineContent.slice(item.position.end.col),
-    ]
+    const sentence = this.buildSentence(lines, item)
 
     details.ownListItems.forEach((ownListItem) => {
       if (ownListItem.parent === listItem.parent) {
@@ -750,12 +728,7 @@ export default class MyGraph extends Graph {
     )
     if (!sameParagraph) return false
 
-    const lineContent = lines[item.position.start.line]
-    const sentence = [
-      lineContent.slice(0, item.position.start.col),
-      lineContent.slice(item.position.start.col, item.position.end.col),
-      lineContent.slice(item.position.end.col),
-    ]
+    const sentence = this.buildSentence(lines, item)
     addPreCocitation(preCocitations, linkPath, 1 / 4, sentence, pre, item.position.start.line)
     return true
   }
@@ -776,12 +749,7 @@ export default class MyGraph extends Graph {
     )
     if (headingMatches.length === 0) return false
 
-    const lineContent = lines[item.position.start.line]
-    const sentence = [
-      lineContent.slice(0, item.position.start.col),
-      lineContent.slice(item.position.start.col, item.position.end.col),
-      lineContent.slice(item.position.end.col),
-    ]
+    const sentence = this.buildSentence(lines, item)
     const bestLevel = Math.max(...headingMatches.map(([heading]) => heading.level))
     const score = 1 / Math.pow(2, 3 + details.maxHeadingLevel - bestLevel)
     addPreCocitation(preCocitations, linkPath, score, sentence, pre, item.position.start.line)
