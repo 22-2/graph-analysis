@@ -1,8 +1,7 @@
 <script lang="ts">
-  import debounce from 'lodash.debounce'
   import type { App } from 'obsidian'
-  import { MarkdownView } from 'obsidian'
-  import { onDestroy, onMount } from 'svelte'
+  import { MarkdownView, debounce } from 'obsidian'
+  import { onDestroy, onMount, type Component, untrack } from 'svelte'
   import type AnalysisView from 'src/AnalysisView'
   import { ANALYSIS_TYPES } from 'src/Constants'
   import type {
@@ -24,15 +23,21 @@
   import TableComponent from './TableComponent.svelte'
   import InfiniteScroll from './InfiniteScroll.svelte'
 
-  let { app, plugin, settings, view, currSubtype } = $props<{
+  interface Props {
     app: App
     plugin: GraphAnalysisPlugin
     settings: GraphAnalysisSettings
     view: AnalysisView
     currSubtype: Subtype
-  }>()
+  }
 
-  const componentMap = {
+  let { app, plugin, settings, view, currSubtype }: Props = $props()
+
+  // $props の初期値をローカル変数に取り出してから $state に渡すっす
+  const { noZero: initNoZero, excludeLinked: initExcludeLinked } = untrack(() => settings)
+  const initCurrFile = untrack(() => app.workspace.getActiveFile()) ?? undefined
+
+  const componentMap: Partial<Record<Subtype, Component<any>>> = {
     'Adamic Adar': TableComponent,
     'Common Neighbours': TableComponent,
     Jaccard: TableComponent,
@@ -56,16 +61,16 @@
   )
   let frozen = $state(false)
   let ascOrder = $state(false)
-  let noInfinity = $state(settings.noInfinity)
-  let noZero = $state(settings.noZero)
-  let excludeLinked = $state(settings.excludeLinked)
+  let noInfinity = $derived(settings.noInfinity)
+  let noZero = $state(initNoZero)
+  let excludeLinked = $state(initExcludeLinked)
   let sortBy = $state(true) // For HITS
   let resolution = $state(10) // For Louvain
   let its = $state(20) // For Label Propagation
 
-  let currFile = $state(app.workspace.getActiveFile())
+  let currFile = $state<import('obsidian').TFile | undefined>(initCurrFile)
   const currNode = $derived(currFile?.path)
-  let { resolvedLinks } = app.metadataCache
+  const resolvedLinks = $derived(app.metadataCache.resolvedLinks)
 
   // --- Infinite Scroll State ---
   const BATCH_SIZE = 50
@@ -73,7 +78,7 @@
   let page = $state(0)
   let hasMore = $state(false)
   let blockSwitch = $state(false) // Prevents race conditions on rapid state changes
-  let scrollContainer: HTMLElement
+  let scrollContainer = $state<HTMLElement | undefined>(undefined)
 
   // --- Data Fetching and Processing ---
   const promiseSortedResults = $derived((async () => {
@@ -84,17 +89,16 @@
 
     switch (currSubtype) {
       case 'HITS': {
-        const cacheKey = `HITS:`
-        let results: HITSResult = plugin.analysisCache.get(cacheKey)
+        let results = plugin.analysisCache.getHITS()
         if (!results) {
-          results = await plugin.g.algs['HITS']('')
-          plugin.analysisCache.set(cacheKey, results)
+          results = await plugin.g.algs['HITS']!('')
+          plugin.analysisCache.setHITS(results)
         }
         const componentResults: any[] = []
-        plugin.g.forEachNode((to) => {
-          const authority = roundNumber(results.authorities[to])
-          const hub = roundNumber(results.hubs[to])
-          const linked = isLinked(resolvedLinks, currNode, to, false)
+        plugin.g.forEachNode((to: string) => {
+          const authority = roundNumber(results!.authorities[to])
+          const hub = roundNumber(results!.hubs[to])
+          const linked = isLinked(resolvedLinks, currNode ?? '', to, false)
           if (!(authority === 0 && hub === 0) && !(excludeLinked && linked)) {
             componentResults.push({
               authority,
@@ -108,16 +112,16 @@
         return componentResults.sort((a, b) => (sortBy ? (a.authority > b.authority ? greater : lesser) : a.hub > b.hub ? greater : lesser))
       }
       case 'Co-Citations': {
-        const cacheKey = `Co-Citations:${currNode}`
-        let results: CoCitationMap = plugin.analysisCache.get(cacheKey)
+        const node = currNode ?? ''
+        let results = plugin.analysisCache.getCoCitations(node)
         if (!results) {
-          results = await plugin.g.algs['Co-Citations'](currNode)
-          plugin.analysisCache.set(cacheKey, results)
+          results = await plugin.g.algs['Co-Citations']!(node)
+          plugin.analysisCache.setCoCitations(node, results)
         }
         const componentResults: any[] = []
         for (const to in results) {
           const result = results[to]
-          const linked = isLinked(resolvedLinks, currNode, to, false)
+          const linked = isLinked(resolvedLinks, currNode ?? '', to, false)
           if (!(excludeLinked && linked)) {
             componentResults.push({
               to,
@@ -132,31 +136,31 @@
         return componentResults.sort((a, b) => (a.measure > b.measure ? greater : lesser))
       }
       case 'Louvain': {
-        const cacheKey = `Louvain:${currNode}:${resolution}`
-        let results: string[] = plugin.analysisCache.get(cacheKey)
+        const node = currNode ?? ''
+        let results = plugin.analysisCache.getLouvain(node, resolution)
         if (!results) {
-          results = await plugin.g.algs['Louvain'](currNode, { resolution })
-          plugin.analysisCache.set(cacheKey, results)
+          results = await plugin.g.algs['Louvain']!(node, { resolution })
+          plugin.analysisCache.setLouvain(node, resolution, results)
         }
         return results
           .map(to => ({
             to,
-            linked: isLinked(resolvedLinks, currNode, to, false),
+            linked: isLinked(resolvedLinks, currNode ?? '', to, false),
             resolved: !to.endsWith('.md') || !!app.metadataCache.getFirstLinkpathDest(to, ''),
             img: settings.showImgThumbnails && isImg(to) ? getImgBufferPromise(app, to) : null,
           }))
           .filter(node => !(excludeLinked && node.linked))
       }
       case 'Label Propagation': {
-        const cacheKey = `Label Propagation::${its}`
-        let comms: Communities = plugin.analysisCache.get(cacheKey)
+        let comms = plugin.analysisCache.getLabelPropagation(its)
         if (!comms) {
-          comms = await plugin.g.algs[currSubtype]('', { iterations: its })
-          plugin.analysisCache.set(cacheKey, comms)
+          comms = await plugin.g.algs['Label Propagation']!('', { iterations: its })
+          plugin.analysisCache.setLabelPropagation(its, comms)
         }
+        if (!comms) return []
         const componentResults: any[] = []
         Object.keys(comms).forEach((label) => {
-          let comm = comms[label]
+          const comm = comms![label]
           if (comm.length > 1) {
             componentResults.push({ label, comm })
           }
@@ -164,16 +168,16 @@
         return componentResults.sort((a, b) => (a.comm.length > b.comm.length ? greater : lesser))
       }
       default: { // For all TableComponent types
-        const cacheKey = `${currSubtype}:${currNode}`
-        let results: ResultMap = plugin.analysisCache.get(cacheKey)
+        const node = currNode ?? ''
+        let results = plugin.analysisCache.getResultMap(currSubtype, node)
         if (!results) {
-          results = await plugin.g.algs[currSubtype](currNode)
-          plugin.analysisCache.set(cacheKey, results)
+          results = await plugin.g.algs[currSubtype]!(node)
+          plugin.analysisCache.setResultMap(currSubtype, node, results)
         }
         const componentResults: any[] = []
-        plugin.g.forEachNode((to) => {
-          const { measure, extra } = results[to]
-          const linked = isLinked(resolvedLinks, currNode, to, false)
+        plugin.g.forEachNode((to: string) => {
+          const { measure, extra } = results![to]
+          const linked = isLinked(resolvedLinks, currNode ?? '', to, false)
           if (
             !(noInfinity && measure === Infinity) &&
             !(noZero && measure === 0) &&
@@ -198,7 +202,7 @@
   $effect(() => {
     // This effect runs whenever any of its dependencies change.
     // It resets the view when a setting or the current node changes.
-    const _ = currSubtypeInfo || noZero || ascOrder || currFile || excludeLinked || frozen || sortBy || resolution || its
+    void (currSubtypeInfo || noZero || ascOrder || currFile || excludeLinked || frozen || sortBy || resolution || its)
 
     blockSwitch = true
     visibleData = []
@@ -208,15 +212,16 @@
     }, 100)
   })
 
-  $effect(async () => {
-    const sorted = await promiseSortedResults
-    if (sorted) {
-      visibleData = sorted.slice(0, BATCH_SIZE)
-      hasMore = sorted.length > visibleData.length
-    } else {
-      visibleData = []
-      hasMore = false
-    }
+  $effect(() => {
+    promiseSortedResults.then((sorted) => {
+      if (sorted) {
+        visibleData = sorted.slice(0, BATCH_SIZE)
+        hasMore = sorted.length > visibleData.length
+      } else {
+        visibleData = []
+        hasMore = false
+      }
+    })
   })
 
   async function loadMore() {
@@ -242,13 +247,13 @@
     if (!activeView || frozen || activeView.file?.path === currFile?.path) {
       return
     }
-    currFile = activeView.file
+    currFile = activeView.file ?? undefined
   }
 
   const debouncedMetadataChange = debounce(onMetadataChange, 1000)
 
   onMount(() => {
-    currFile = app.workspace.getActiveFile()
+    currFile = app.workspace.getActiveFile() ?? undefined
     app.workspace.on('active-leaf-change', onLeafChange)
     if (currSubtypeInfo && !currSubtypeInfo.global) {
       app.metadataCache.on('changed', debouncedMetadataChange)
@@ -320,8 +325,9 @@
     <p class="GA-info-message">Loading analysis...</p>
   {:then sortedResults}
     {#if sortedResults && sortedResults.length > 0}
-      {#if componentMap[currSubtype]}
-        <svelte:component this={componentMap[currSubtype]} {...presentationProps} />
+      {#if componentMap[currSubtype as Subtype]}
+        {@const DynComponent = componentMap[currSubtype as Subtype]}
+        <DynComponent {...presentationProps} />
       {/if}
 
       <InfiniteScroll

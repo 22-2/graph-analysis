@@ -1,4 +1,3 @@
-import { LRUCache } from 'lru-cache'
 import { addIcon, Notice, Plugin, WorkspaceLeaf } from 'obsidian'
 import AnalysisView from 'src/AnalysisView'
 import {
@@ -9,12 +8,13 @@ import {
 import type { GraphAnalysisSettings } from 'src/Interfaces'
 import MyGraph from 'src/MyGraph'
 import { SampleSettingTab } from 'src/Settings'
+import { AnalysisCache } from 'src/utils/AnalysisCache'
 import { debug, openView } from './Utility'
 
 export default class GraphAnalysisPlugin extends Plugin {
   settings!: GraphAnalysisSettings
   g!: MyGraph
-  private analysisCache!: LRUCache<string, any>
+  analysisCache!: AnalysisCache
 
   async onload() {
     console.log('loading graph analysis plugin')
@@ -22,7 +22,7 @@ export default class GraphAnalysisPlugin extends Plugin {
     await this.loadSettings()
 
     // キャッシュを初期化（最大100エントリ、30分間有効）
-    this.analysisCache = new LRUCache({
+    this.analysisCache = new AnalysisCache({
       max: 100,
       ttl: 1000 * 60 * 30,
     })

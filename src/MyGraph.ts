@@ -26,6 +26,7 @@ import {
 } from 'src/GeneralGraphFn'
 import type {
   AnalysisAlg,
+  AnalysisCacheMap,
   CoCitation,
   CoCitationMap,
   Communities,
@@ -144,9 +145,7 @@ export default class MyGraph extends Graph {
   // --- 分析アルゴリズムっす ---
 
   algs: Partial<{
-    [subtype in Subtype]: AnalysisAlg<
-      ResultMap | CoCitationMap | Communities | string[] | HITSResult
-    >
+    [S in Subtype]: AnalysisAlg<AnalysisCacheMap[S]>
   }> = {
     // Random: async (a :string) => {
     //   sampleSize(this.nodes(), 50)

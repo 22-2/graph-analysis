@@ -1,4 +1,4 @@
-import type { ReferenceCache, TFile } from 'obsidian'
+import type { ReferenceCache } from 'obsidian'
 
 export interface ResolvedLinks {
   [from: string]: {
@@ -90,6 +90,32 @@ export interface LineSentences {
   linkSentenceEnd: number
   sentences: [string]
   link: ReferenceCache
+}
+
+export type AnalysisCacheValue =
+  | HITSResult
+  | CoCitationMap
+  | string[]
+  | Communities
+  | ResultMap
+
+/** サブタイプごとのキャッシュ値の型マップ */
+export interface AnalysisCacheMap {
+  HITS: HITSResult
+  'Co-Citations': CoCitationMap
+  Louvain: string[]
+  'Label Propagation': Communities
+  'Adamic Adar': ResultMap
+  'Common Neighbours': ResultMap
+  Jaccard: ResultMap
+  Overlap: ResultMap
+  PageRank: ResultMap
+  'Betweenness Centrality': ResultMap
+  'Clustering Coefficient': ResultMap
+  BoW: ResultMap
+  Tversky: ResultMap
+  'Otsuka-Chiai': ResultMap
+  Sentiment: ResultMap
 }
 
 export type AnalysisAlg<T> = (a: string, options?: any) => Promise<T>
