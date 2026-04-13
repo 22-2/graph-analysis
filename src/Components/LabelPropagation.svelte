@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { App } from 'obsidian'
   import type AnalysisView from 'src/AnalysisView'
-  import { ICON, MEASURE, NODE } from 'src/Constants'
+  import { MEASURE } from 'src/Constants'
   import type { GraphAnalysisSettings } from 'src/Interfaces'
   import type GraphAnalysisPlugin from 'src/main'
   import {
@@ -16,9 +16,7 @@
     openOrSwitch,
     presentPath,
   } from 'src/Utility'
-  import ObsidianIcon from 'src/Components/ObsidianIcon.svelte'
-  import ExtensionIcon from './ExtensionIcon.svelte'
-  import ImgThumbnail from './ImgThumbnail.svelte'
+  import NodeLabel from './NodeLabel.svelte'
 
   type ComponentResult = {
     label: string
@@ -38,9 +36,12 @@
     view: AnalysisView
     currNode: string
     visibleData: ComponentResult[]
+    its?: number
+    resolution?: number
+    currSubtypeInfo?: unknown
   } = $props()
 
-  let { resolvedLinks } = app.metadataCache
+  const resolvedLinks = $derived(app.metadataCache.resolvedLinks)
 </script>
 
 <div class="GA-CCs">
@@ -66,7 +67,6 @@
           {#each comm.comm as member (member)}
             <div
               class="
-                    {NODE}
                     {classLinked(resolvedLinks, comm.label, member)}
                     {classResolved(app, member)}
                     {classExt(member)}
@@ -77,19 +77,14 @@
               }}
               onmouseover={(e) => hoverPreview(e, view, member)}
             >
-              {#if isLinked(resolvedLinks, comm.label, member, false)}
-                <span class={ICON}>
-                  <ObsidianIcon iconName="link" />
-                </span>
-              {/if}
-              <ExtensionIcon path={member} />
-              <span
-                class="internal-link {currNode === member ? 'currNode' : ''}"
-                >{presentPath(member)}</span
-              >
-              {#if plugin.settings.showImgThumbnails && isImg(member)}
-                <ImgThumbnail img={getImgBufferPromise(app, member)} />
-              {/if}
+              <NodeLabel
+                path={member}
+                img={plugin.settings.showImgThumbnails && isImg(member)
+                  ? getImgBufferPromise(app, member)
+                  : null}
+                linked={isLinked(resolvedLinks, comm.label, member, false)}
+                currNode={currNode}
+              />
             </div>
           {/each}
         </div>

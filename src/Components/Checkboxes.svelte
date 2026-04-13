@@ -2,23 +2,36 @@
   import AnalysisView from '../AnalysisView'
   import { VIEW_TYPE_GRAPH_ANALYSIS } from '../Constants'
 
-  import type GraphAnalysisPlugin from '../main'
+  import type { GraphAnalysisSettings } from '../Interfaces'
+  import type GraphAnalysisPlugin from 'src/main'
 
-  let { plugin, settingName, options } = $props<{
+  let { plugin, settingName, options }: {
     plugin: GraphAnalysisPlugin
-    settingName: string
+    settingName: keyof GraphAnalysisSettings
     options: string[]
-  }>()
-  let selected = $state(plugin.settings[settingName] as string[])
+  } = $props()
+
+  // Use a local state that is initialized once and doesn't trigger reactivity warning
+  // In Svelte 5, $state(plugin.settings[settingName]) can trigger a warning if done at top level.
+  let selected = $state<string[]>([])
+  
+  $effect.pre(() => {
+    // Safety check and cast
+    const val = plugin.settings[settingName]
+    if (Array.isArray(val)) {
+      selected = val as string[]
+    }
+  })
 
   const toNone = $derived(selected.length !== 0)
 
   async function save() {
-    if (plugin.settings[settingName] === undefined) {
+    const settings = plugin.settings as any
+    if (settings[settingName] === undefined) {
       return console.log(settingName + ' not found in BC settings')
     }
 
-    plugin.settings[settingName] = selected
+    settings[settingName] = selected
     await plugin.saveSettings()
 
     const leaves = plugin.app.workspace.getLeavesOfType(VIEW_TYPE_GRAPH_ANALYSIS)

@@ -12,24 +12,25 @@
     component: Component
   }>()
 
-  let renderedSentence = sentence[0] + '==' + sentence[1] + '==' + sentence[2]
-  if (sentence.length === 5) {
-    renderedSentence =
-      renderedSentence + '==' + sentence[3] + '==' + sentence[4]
-  }
-  renderedSentence = renderedSentence.trim()
+  const renderedSentence = $derived.by(() => {
+    let res = sentence[0] + '==' + sentence[1] + '==' + sentence[2]
+    if (sentence.length === 5) {
+      res = res + '==' + sentence[3] + '==' + sentence[4]
+    }
+    return res.trim()
+  })
 
   let el: HTMLElement
   onMount(async () => {
     // 第4引数に null の代わりに component を渡す
     MarkdownRenderer.renderMarkdown(renderedSentence, el, sourcePath, component)
-    for (let markedEl of el.getElementsByTagName('mark')) {
+    for (const markedEl of Array.from(el.getElementsByTagName('mark'))) {
       markedEl.classList.add('CC-mark')
     }
-    for (let markedEl: HTMLElement of el.getElementsByTagName('ol')) {
+    for (const markedEl of Array.from(el.getElementsByTagName('ol'))) {
       markedEl.classList.add('CC-edit')
     }
-    for (let markedEl: HTMLElement of el.getElementsByTagName('hr')) {
+    for (const markedEl of Array.from(el.getElementsByTagName('hr'))) {
       markedEl.classList.add('CC-hr')
     }
   })
@@ -44,7 +45,7 @@
       jumpToSelection(app, line, sentence.join(''))
     }
   }}
-/>
+></div>
 
 <style>
   .CC-sentence {

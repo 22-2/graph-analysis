@@ -38,7 +38,7 @@ export function roundNumber(num: number, dec: number = DECIMALS): number {
 }
 
 export const dropPath = (path: string) => {
-  return path.split('/').last()
+  return path.split('/').last() ?? ''
 }
 
 const dropExt = (path: string) =>

@@ -91,12 +91,7 @@
   // Derived
   // ---------------------------------------------------------------------------
 
-  let currSubtypeInfo = $state(
-    ANALYSIS_TYPES.find((s) => s.subtype === currSubtype)
-  )
-  $effect(() => {
-    currSubtypeInfo = ANALYSIS_TYPES.find((s) => s.subtype === currSubtype)
-  })
+  const currSubtypeInfo = $derived(ANALYSIS_TYPES.find((s) => s.subtype === currSubtype))
   const currNode       = $derived(currFile?.path)
   const resolvedLinks  = $derived(app.metadataCache.resolvedLinks)
   const noInfinity     = $derived(settings.noInfinity)
@@ -359,7 +354,7 @@
 <ScrollSelector {currSubtype} {view} />
 
 <SubtypeOptions
-  bind:currSubtypeInfo
+  {currSubtypeInfo}
   bind:noZero
   bind:ascOrder
   bind:currFile
@@ -369,7 +364,7 @@
   {app}
   {plugin}
   {view}
-/>
+></SubtypeOptions>
 
 {#if currSubtype === 'Louvain'}
   <div class="GA-alg-options">

@@ -20,7 +20,7 @@
   }
 
   let {
-    currSubtypeInfo = $bindable(),
+    currSubtypeInfo,
     noZero = $bindable(undefined),
     sortBy = $bindable(undefined),
     ascOrder = $bindable(undefined),
@@ -37,13 +37,13 @@
   {#if currSubtypeInfo}
     <span class="GA-Option-span">
       <span class="icon">
-        <InfoIcon {currSubtypeInfo} />
+        <InfoIcon {currSubtypeInfo}></InfoIcon>
       </span>
     </span>
   {/if}
 
   {#if excludeLinked !== undefined}
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
     <span
       class="GA-Option-span"
       aria-label={excludeLinked ? 'Show Linked Notes' : 'Exclude Linked Notes'}
@@ -53,9 +53,9 @@
     >
       <span class="icon">
         {#if excludeLinked}
-          <ObsidianIcon iconName="unlink" />
+          <ObsidianIcon iconName="unlink"></ObsidianIcon>
         {:else}
-          <ObsidianIcon iconName="link" />
+          <ObsidianIcon iconName="link"></ObsidianIcon>
         {/if}
       </span>
     </span>
@@ -70,9 +70,9 @@
     >
       <span class="icon">
         {#if noZero}
-          <ObsidianIcon iconName="circle-slash" />
+          <ObsidianIcon iconName="circle-slash"></ObsidianIcon>
         {:else}
-          <ObsidianIcon iconName="circle" />
+          <ObsidianIcon iconName="circle"></ObsidianIcon>
         {/if}
       </span>
     </span>
@@ -87,36 +87,36 @@
     >
       <span class="icon">
         {#if ascOrder}
-          <ObsidianIcon iconName="trending-up" />
+          <ObsidianIcon iconName="trending-up"></ObsidianIcon>
         {:else}
-          <ObsidianIcon iconName="trending-down" />
+          <ObsidianIcon iconName="trending-down"></ObsidianIcon>
         {/if}
       </span>
     </span>
   {/if}
   {#if frozen !== undefined}
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
     <span
       class="GA-Option-span"
       aria-label={frozen ? `Frozen on: ${currFile?.basename}` : 'Unfrozen'}
       onclick={() => {
         frozen = !frozen
         if (!frozen) {
-          setTimeout(() => (currFile = app.workspace.getActiveFile()), 100)
+          setTimeout(() => (currFile = app.workspace.getActiveFile() ?? undefined), 100)
         }
       }}
     >
       <span class="icon">
         {#if frozen}
-          <ObsidianIcon iconName="snowflake" />
+          <ObsidianIcon iconName="snowflake"></ObsidianIcon>
         {:else}
-          <ObsidianIcon iconName="flame" />
+          <ObsidianIcon iconName="flame"></ObsidianIcon>
         {/if}
       </span>
     </span>
   {/if}
   {#if sortBy !== undefined}
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
     <span
       class="GA-Option-span"
       aria-label="Sort By: {sortBy ? 'Authority' : 'Hub'}"
@@ -126,14 +126,14 @@
     >
       <span class="icon">
         {#if sortBy}
-          <ObsidianIcon iconName="log-in" />
+          <ObsidianIcon iconName="log-in"></ObsidianIcon>
         {:else}
-          <ObsidianIcon iconName="log-out" />
+          <ObsidianIcon iconName="log-out"></ObsidianIcon>
         {/if}
       </span>
     </span>
   {/if}
-  <!-- svelte-ignore a11y-click-events-have-key-events -->
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
   <span
     class="GA-Option-span"
     aria-label="Refresh Index"
@@ -142,7 +142,7 @@
     }}
   >
     <span class="icon">
-      <ObsidianIcon iconName="refresh-cw" />
+      <ObsidianIcon iconName="refresh-cw"></ObsidianIcon>
     </span>
   </span>
 </span>

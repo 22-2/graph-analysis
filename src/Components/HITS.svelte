@@ -8,13 +8,10 @@
     classExt,
     dropPath,
     hoverPreview,
-    isImg,
     openMenu,
     openOrSwitch,
-    presentPath,
   } from 'src/Utility'
-  import ExtensionIcon from './ExtensionIcon.svelte'
-  import ImgThumbnail from './ImgThumbnail.svelte'
+  import NodeLabel from './NodeLabel.svelte'
 
   type ComponentResult = {
     authority: number
@@ -37,7 +34,9 @@
     // Unused props to match signature
     plugin: GraphAnalysisPlugin
     settings: GraphAnalysisSettings
-    currSubtypeInfo: any
+    currSubtypeInfo: unknown
+    its?: number
+    resolution?: number
   }>()
 </script>
 
@@ -52,7 +51,6 @@
     </thead>
     <tbody>
       {#each visibleData as node (node.to)}
-        <!-- svelte-ignore a11y-unknown-aria-attribute -->
         <tr class="{classExt(node.to)}">
           <td
             onmousedown={async (e) => {
@@ -62,18 +60,12 @@
             oncontextmenu={(e) => openMenu(e, app, { nodePath: node.to })}
             onmouseover={(e) => hoverPreview(e, view, dropPath(node.to))}
           >
-            <ExtensionIcon path={node.to} />
-
-            <span
-              class="internal-link
-                  {node.resolved ? '' : 'is-unresolved'}
-                    {currNode === node.to ? 'currNode' : ''}"
-            >
-              {presentPath(node.to)}
-            </span>
-            {#if isImg(node.to)}
-              <ImgThumbnail img={node.img} />
-            {/if}
+            <NodeLabel
+              path={node.to}
+              img={node.img}
+              resolved={node.resolved}
+              currNode={currNode}
+            />
           </td>
           <td class={MEASURE}>{node.authority}</td>
           <td class={MEASURE}>{node.hub}</td>

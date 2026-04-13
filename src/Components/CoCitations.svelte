@@ -1,23 +1,17 @@
 <script lang="ts">
   import type { App } from 'obsidian'
   import type AnalysisView from 'src/AnalysisView'
-  import { ICON, MEASURE } from 'src/Constants'
-  import type {
-    CoCitation,
-    GraphAnalysisSettings,
-  } from 'src/Interfaces'
+  import { MEASURE } from 'src/Constants'
+  import type { CoCitation, GraphAnalysisSettings } from 'src/Interfaces'
   import type GraphAnalysisPlugin from 'src/main'
   import {
     dropPath,
     hoverPreview,
-    isImg,
     openMenu,
     openOrSwitch,
     presentPath,
   } from 'src/Utility'
-  import ObsidianIcon from 'src/Components/ObsidianIcon.svelte'
-  import ExtensionIcon from './ExtensionIcon.svelte'
-  import ImgThumbnail from './ImgThumbnail.svelte'
+  import NodeLabel from './NodeLabel.svelte'
   import RenderedMarkdown from './RenderedMarkdown.svelte'
 
   type ComponentResult = {
@@ -40,7 +34,9 @@
     // Unused props to match signature
     plugin: GraphAnalysisPlugin
     settings: GraphAnalysisSettings
-    currNode: string
+    currNode?: string
+    its?: number
+    resolution?: number
   } = $props()
 </script>
 
@@ -54,8 +50,8 @@
             oncontextmenu={(e) => openMenu(e, app, { nodePath: node.to })}
           >
             <span class="top-row">
-              <!-- svelte-ignore a11y-mouse-events-have-key-events -->
-              <!-- svelte-ignore a11y-no-static-element-interactions -->
+              <!-- svelte-ignore a11y_mouse_events_have_key_events -->
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
               <span
                 onmousedown={async (e) => {
                   if (e.button === 0 || e.button === 1)
@@ -63,18 +59,12 @@
                 }}
                 onmouseover={(e) => hoverPreview(e, view, dropPath(node.to))}
               >
-                {#if node.linked}
-                  <span class={ICON}><ObsidianIcon iconName="link" /></span>
-                {/if}
-                <ExtensionIcon path={node.to} />
-                <span
-                  class="internal-link {node.resolved ? '' : 'is-unresolved'}"
-                >
-                  {presentPath(node.to)}
-                </span>
-                {#if isImg(node.to)}
-                  <ImgThumbnail img={node.img} />
-                {/if}
+                <NodeLabel
+                  path={node.to}
+                  img={node.img}
+                  linked={node.linked}
+                  resolved={node.resolved}
+                ></NodeLabel>
               </span>
               <span class={MEASURE}>{node.measure.toFixed(2)}</span>
             </span>
@@ -84,8 +74,6 @@
               <div class="citation-group">
                 <div class="CC-item">
                   From:
-                  <!-- svelte-ignore a11y-mouse-events-have-key-events -->
-                  <!-- svelte-ignore a11y-no-static-element-interactions -->
                   <span
                     class="internal-link"
                     onmousedown={async (e) => {
@@ -105,7 +93,7 @@
                   sourcePath={citation.source}
                   line={citation.line}
                   component={view}
-                />
+                ></RenderedMarkdown>
               </div>
             {/each}
           </div>
