@@ -1,5 +1,4 @@
-import type { TFile } from 'obsidian'
-import type { ReferenceCache } from 'obsidian'
+import type { ReferenceCache, TFile } from 'obsidian'
 
 export interface ResolvedLinks {
   [from: string]: {

@@ -1,8 +1,8 @@
-import { ItemView, type ViewStateResult, WorkspaceLeaf } from 'obsidian'
-import { mount, unmount } from 'svelte'
+import { ItemView, WorkspaceLeaf, type ViewStateResult } from 'obsidian'
 import { VIEW_TYPE_GRAPH_ANALYSIS } from 'src/Constants'
 import type { Subtype } from 'src/Interfaces'
 import type GraphAnalysisPlugin from 'src/main'
+import { mount, unmount } from 'svelte'
 import AnalysisComponent from './Components/AnalysisComponent.svelte'
 
 export default class AnalysisView extends ItemView {

@@ -1,9 +1,9 @@
 import { App, Notice, PluginSettingTab, Setting } from 'obsidian'
-import { mount } from 'svelte'
 import { ANALYSIS_TYPES, VIEW_TYPE_GRAPH_ANALYSIS } from 'src/Constants'
 import type { Subtype } from 'src/Interfaces'
 import type GraphAnalysisPlugin from 'src/main'
 import { getAlgorithmDisplayName } from 'src/Utility'
+import { mount } from 'svelte'
 import AnalysisView from './AnalysisView'
 import Checkboxes from './Components/Checkboxes.svelte'
 

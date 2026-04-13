@@ -1,27 +1,24 @@
 import {
   App,
-  type CacheItem,
-  type Constructor,
-  type EditorRange,
   ItemView,
   MarkdownView,
   Menu,
   Notice,
   TFile,
   WorkspaceLeaf,
+  type CacheItem,
+  type Constructor,
+  type EditorRange,
 } from 'obsidian'
 import { copy, createNewMDNote } from 'obsidian-community-lib'
 import type AnalysisView from 'src/AnalysisView'
 import { DECIMALS, IMG_EXTENSIONS, LINKED, NOT_LINKED } from 'src/Constants'
 import type {
-  ComponentResults,
+  CoCitation,
   GraphAnalysisSettings,
   ResolvedLinks,
-  ResultMap,
   Subtype,
 } from 'src/Interfaces'
-import type { CoCitation } from 'src/Interfaces'
-import type GraphAnalysisPlugin from 'src/main'
 
 export const sum = (arr: number[]) => {
   if (arr.length === 0) {
@@ -36,12 +33,6 @@ export function debug<T>(settings: GraphAnalysisSettings, log: T): void {
   }
 }
 
-export function superDebug<T>(settings: GraphAnalysisSettings, log: T): void {
-  if (settings.superDebugMode) {
-    console.log(log)
-  }
-}
-
 export function roundNumber(num: number, dec: number = DECIMALS): number {
   return Math.round(num * Math.pow(10, dec)) / Math.pow(10, dec)
 }
@@ -50,9 +41,9 @@ export const dropPath = (path: string) => {
   return path.split('/').last()
 }
 
-export const dropExt = (path: string) =>
+const dropExt = (path: string) =>
   path.split('.').length === 1 ? path : path.split('.').slice(0, -1).join('.')
-export const getExt = (path: string) => path.split('.').last()
+const getExt = (path: string) => path.split('.').last()
 
 export const classExt = (path: string) => `GA-${getExt(path)}`
 export const classResolved = (app: App, node: string) =>
@@ -66,7 +57,7 @@ export const classLinked = (
 
 export const presentPath = (path: string) => dropExt(dropPath(path) ?? '')
 
-export const nxnArray = (n: number): undefined[][] =>
+const nxnArray = (n: number): undefined[][] =>
   [...Array(n)].map((e) => Array(n))
 
 export function hoverPreview(
@@ -85,28 +76,6 @@ export function hoverPreview(
   })
 }
 
-export function looserIsLinked(
-  app: App,
-  from: string,
-  to: string,
-  directed: boolean = true
-) {
-  const { resolvedLinks, unresolvedLinks } = app.metadataCache
-  const fromTo =
-    resolvedLinks[from]?.hasOwnProperty(to) ||
-    unresolvedLinks[from]?.hasOwnProperty(dropExt(to))
-  if (!fromTo && !directed) {
-    return (
-      resolvedLinks[to]?.hasOwnProperty(from) ||
-      unresolvedLinks[to]?.hasOwnProperty(dropExt(from))
-    )
-  } else return fromTo
-}
-
-export function isUnresolved(app: App, from: string, to: string) {
-  return app.metadataCache.unresolvedLinks[from]?.hasOwnProperty(to)
-}
-
 /**
  * Adds or updates the given yaml `key` to `value` in the given TFile
  * @param  {string} key
@@ -114,7 +83,7 @@ export function isUnresolved(app: App, from: string, to: string) {
  * @param  {TFile} file
  * @param  {App} app
  */
-export const createOrUpdateYaml = async (
+const createOrUpdateYaml = async (
   key: string,
   value: string,
   file: TFile,
@@ -277,57 +246,6 @@ export function getImgBufferPromise(app: App, fileName: string) {
   return file ? app.vault.readBinary(file) : null
 }
 
-export function getPromiseResults(
-  app: App,
-  plugin: GraphAnalysisPlugin,
-  currNode: string,
-  subtype: Subtype,
-  resolvedLinks: ResolvedLinks,
-  ascOrder = false
-): Promise<ComponentResults[]> {
-  if (!plugin.g || !currNode) return Promise.resolve([])
-
-  const greater = ascOrder ? 1 : -1
-  const lesser = ascOrder ? -1 : 1
-  const alg = plugin.g.algs[subtype]
-  if (!alg) return Promise.resolve([])
-  const resultsPromise = alg(currNode).then(
-    (rawResults) => {
-      const results = rawResults as ResultMap
-      return plugin.g!
-        .nodes()
-        .map((to) => {
-          const { measure, extra } = results[to] as {
-            measure: number
-            extra: any
-          }
-          const resolved = !to.endsWith('.md') || isInVault(app, to)
-          return {
-            measure,
-            linked: isLinked(resolvedLinks, currNode, to, false),
-            to,
-            resolved,
-            extra,
-            img:
-              plugin.settings.showImgThumbnails && isImg(to)
-                ? getImgBufferPromise(app, to)
-                : null,
-          }
-        })
-        .sort((a, b) => {
-          return a.measure === b.measure
-            ? a.extra?.length > b.extra?.length
-              ? greater
-              : lesser
-            : a.measure > b.measure
-            ? greater
-            : lesser
-        })
-    }
-  )
-  return resultsPromise
-}
-
 export function getCounts(arr: any[]) {
   const counts: { [item: string]: number } = {}
   for (const num of arr) {
@@ -434,11 +352,7 @@ export function addPreCocitation(
  * @param mocFile - リンクを挿入するMOCファイル
  * @param fileToLink - リンクするファイル
  */
-export async function addLinkToMoc(
-  app: App,
-  mocFile: TFile,
-  fileToLink: TFile
-) {
+async function addLinkToMoc(app: App, mocFile: TFile, fileToLink: TFile) {
   try {
     const content = await app.vault.read(mocFile)
     const result = _addLinkToMocRelateds(
@@ -475,7 +389,7 @@ export async function addLinkToMoc(
  * @param tabSize - インデントに使用するスペースの数
  * @returns 成功した場合は更新されたコンテンツ、失敗した場合はエラーメッセージを持つオブジェクト。
  */
-export const _addLinkToMocRelateds = (
+const _addLinkToMocRelateds = (
   content: string,
   linkBasename: string,
   tabSize: number // <--- 変更点: 引数を追加
@@ -596,7 +510,7 @@ export async function openView<YourView extends ItemView>(
 
   // @ts-expect-error
   leaf =
-    leaf ?? side === 'right'
+    (leaf ?? side === 'right')
       ? app.workspace.getRightLeaf(false)
       : app.workspace.getLeftLeaf(false)
 
@@ -608,7 +522,7 @@ export async function openView<YourView extends ItemView>(
   return leaf.view as YourView
 }
 
-export const isInVault = (app: App, noteName: string, sourcePath = '') =>
+const isInVault = (app: App, noteName: string, sourcePath = '') =>
   !!app.metadataCache.getFirstLinkpathDest(noteName, sourcePath)
 
 /**
@@ -639,7 +553,7 @@ export function isLinked(
  * @param  {string} noteName with or without '.md' on the end.
  * @returns {string} noteName with '.md' on the end.
  */
-export const addMD = (noteName: string): string => {
+const addMD = (noteName: string): string => {
   return noteName?.match(/\.MD$|\.md$/m) ? noteName : noteName + '.md'
 }
 

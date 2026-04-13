@@ -29,10 +29,7 @@ export function clusteringCoefficient(g: MyGraph, u: string) {
  * @param  {string} u
  * @returns {[string, string][]}
  */
-export function findTrianglesForNode(
-  g: MyGraph,
-  u: string
-): [string, string][] {
+function findTrianglesForNode(g: MyGraph, u: string): [string, string][] {
   const triangles: [string, string][] = []
   ;(g.neighbors(u) as string[]).forEach((v) => {
     ;(g.neighbors(v) as string[]).forEach((w) => {

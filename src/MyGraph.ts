@@ -1,22 +1,22 @@
 // @ts-check
 import Graph, { NotFoundGraphError } from 'graphology'
 import louvain from 'graphology-communities-louvain'
+import betweenness from 'graphology-metrics/centrality/betweenness'
 import hits from 'graphology-metrics/centrality/hits'
 import pageRank from 'graphology-metrics/centrality/pagerank'
-import betweenness from 'graphology-metrics/centrality/betweenness'
 
 import {
   App,
+  getAllTags,
+  getLinkpath,
+  Notice,
+  TFile,
+  type CachedMetadata,
   type CacheItem,
   type HeadingCache,
   type ListItemCache,
-  Notice,
   type ReferenceCache,
   type TagCache,
-  getAllTags,
-  getLinkpath,
-  TFile,
-  type CachedMetadata,
 } from 'obsidian'
 import tokenizer from 'sbd'
 import {
@@ -83,8 +83,14 @@ export default class MyGraph extends Graph {
 
     for (const source in resolvedLinks) {
       const sourceCache = this.app.metadataCache.getCache(source)
-      const sourceTags = uniqueArray(sourceCache ? getAllTags(sourceCache) : null)
-      if (includeTag(sourceTags) && includeRegex(source) && includeExt(source)) {
+      const sourceTags = uniqueArray(
+        sourceCache ? getAllTags(sourceCache) : null
+      )
+      if (
+        includeTag(sourceTags) &&
+        includeRegex(source) &&
+        includeExt(source)
+      ) {
         addNodeIfNotExists(source)
 
         for (const dest in resolvedLinks[source]) {
@@ -358,10 +364,15 @@ export default class MyGraph extends Graph {
   }
 
   /** ノードスコアマップ（{ [node]: number }）を ResultMap に変換するっす */
-  private scoreMapFromNodeValues(scores: { [node: string]: number }): ResultMap {
+  private scoreMapFromNodeValues(scores: {
+    [node: string]: number
+  }): ResultMap {
     const results: ResultMap = {}
     this.forEachNode((node) => {
-      results[node] = { measure: scores[node] ? roundNumber(scores[node]) : 0, extra: [] }
+      results[node] = {
+        measure: scores[node] ? roundNumber(scores[node]) : 0,
+        extra: [],
+      }
     })
     return results
   }
@@ -728,7 +739,14 @@ export default class MyGraph extends Graph {
     if (!sameParagraph) return false
 
     const sentence = this.buildSentence(lines, item)
-    addPreCocitation(preCocitations, linkPath, 1 / 4, sentence, pre, item.position.start.line)
+    addPreCocitation(
+      preCocitations,
+      linkPath,
+      1 / 4,
+      sentence,
+      pre,
+      item.position.start.line
+    )
     return true
   }
 
@@ -749,9 +767,18 @@ export default class MyGraph extends Graph {
     if (headingMatches.length === 0) return false
 
     const sentence = this.buildSentence(lines, item)
-    const bestLevel = Math.max(...headingMatches.map(([heading]) => heading.level))
+    const bestLevel = Math.max(
+      ...headingMatches.map(([heading]) => heading.level)
+    )
     const score = 1 / Math.pow(2, 3 + details.maxHeadingLevel - bestLevel)
-    addPreCocitation(preCocitations, linkPath, score, sentence, pre, item.position.start.line)
+    addPreCocitation(
+      preCocitations,
+      linkPath,
+      score,
+      sentence,
+      pre,
+      item.position.start.line
+    )
     return true
   }
 

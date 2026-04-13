@@ -1,1 +1,1 @@
-declare module 'sbd';
+declare module 'sbd'

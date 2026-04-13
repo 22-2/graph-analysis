@@ -1,5 +1,5 @@
-import { addIcon, Notice, Plugin, WorkspaceLeaf } from 'obsidian'
 import { LRUCache } from 'lru-cache'
+import { addIcon, Notice, Plugin, WorkspaceLeaf } from 'obsidian'
 import AnalysisView from 'src/AnalysisView'
 import {
   DEFAULT_SETTINGS,
@@ -116,7 +116,7 @@ export default class GraphAnalysisPlugin extends Plugin {
   private registerViews() {
     this.registerView(
       VIEW_TYPE_GRAPH_ANALYSIS,
-      (leaf: WorkspaceLeaf) => new AnalysisView(leaf, this, "Adamic Adar")
+      (leaf: WorkspaceLeaf) => new AnalysisView(leaf, this, 'Adamic Adar')
     )
     this.addSettingTab(new SampleSettingTab(this.app, this))
   }
@@ -235,11 +235,7 @@ export default class GraphAnalysisPlugin extends Plugin {
    * @returns 開かれた、またはアクティブになったAnalysisViewのインスタンス
    */
   public async activateAnalysisView(): Promise<AnalysisView> {
-    await openView(
-      this.app,
-      VIEW_TYPE_GRAPH_ANALYSIS,
-      AnalysisView
-    )
+    await openView(this.app, VIEW_TYPE_GRAPH_ANALYSIS, AnalysisView)
     if (this.app.workspace.rightSplit.collapsed) {
       this.app.workspace.rightSplit.expand()
     }
