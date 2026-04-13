@@ -64,7 +64,7 @@ export interface ComponentResults {
   to: string
   resolved: boolean
   extra: any
-  img: Promise<ArrayBuffer>
+  img: Promise<ArrayBuffer> | null
 }
 
 export interface CoCitation {
@@ -112,20 +112,6 @@ export interface GraphAnalysisSettings {
   algorithmRenames: { [key: string]: string }
 }
 
-export interface NLPPlugin {
-  Docs: { [path: string]: Document }
-  model: WinkMethods
-  getDocFromFile: (file: TFile) => Promise<Document>
-  getNoStopBoW: (doc: Document, type?: 'tokens' | 'entities') => Bow
-  getNoStopSet: (doc: Document, type?: 'tokens' | 'entities') => Set<string>
-  getAvgSentimentFromDoc: (
-    doc: Document,
-    opts?: { perSentence?: boolean; normalised?: boolean }
-  ) => number
-  settings: { refreshDocsOnLoad: boolean }
-  worker: Worker
-}
-
 declare module 'obsidian' {
   interface App {
     plugins: {
@@ -140,7 +126,6 @@ declare module 'obsidian' {
             update(key: string, value: string, file: TFile): Promise<void>
           }
         }
-        nlp: NLPPlugin
       }
     }
   }

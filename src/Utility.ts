@@ -1,8 +1,8 @@
 import {
   App,
-  CacheItem,
-  Constructor,
-  EditorRange,
+  type CacheItem,
+  type Constructor,
+  type EditorRange,
   ItemView,
   MarkdownView,
   Menu,
@@ -64,7 +64,7 @@ export const classLinked = (
   directed = false
 ) => (isLinked(resolvedLinks, from, to, directed) ? LINKED : NOT_LINKED)
 
-export const presentPath = (path: string) => dropExt(dropPath(path))
+export const presentPath = (path: string) => dropExt(dropPath(path) ?? '')
 
 export const nxnArray = (n: number): undefined[][] =>
   [...Array(n)].map((e) => Array(n))
@@ -120,7 +120,6 @@ export const createOrUpdateYaml = async (
   file: TFile,
   app: App
 ) => {
-  // @ts-ignore
   const api = app.plugins.plugins.metaedit?.api
 
   if (!api) {
@@ -146,7 +145,7 @@ export function openMenu(
   options: { toCopy?: string; nodePath?: string } = {}
 ) {
   const { toCopy, nodePath } = options
-  const menu = new Menu(app)
+  const menu = new Menu()
 
   if (toCopy) {
     menu.addItem((item) =>
@@ -194,9 +193,10 @@ export function openMenu(
       item
         .setTitle('Create Link: Current')
         .setIcon('documents')
-        .onClick((e) => {
+        .onClick((_e) => {
           try {
             const currFile = app.workspace.getActiveFile()
+            if (!currFile) return
             const targetStr = presentPath(nodePath)
             createOrUpdateYaml('key', targetStr, currFile, app)
 
@@ -211,8 +211,9 @@ export function openMenu(
       item
         .setTitle('Create Link: Target')
         .setIcon('documents')
-        .onClick((e) => {
-          const currStr = app.workspace.getActiveFile().basename
+        .onClick((_e) => {
+          const currStr = app.workspace.getActiveFile()?.basename
+          if (!currStr) return
           if (!targetFile) {
             new Notice(
               `${presentPath(nodePath)} does not exist in your vault yet`
@@ -284,13 +285,16 @@ export function getPromiseResults(
   resolvedLinks: ResolvedLinks,
   ascOrder = false
 ): Promise<ComponentResults[]> {
-  if (!plugin.g || !currNode) return null
+  if (!plugin.g || !currNode) return Promise.resolve([])
 
   const greater = ascOrder ? 1 : -1
   const lesser = ascOrder ? -1 : 1
-  const resultsPromise = plugin.g.algs[subtype](currNode).then(
-    (results: ResultMap) =>
-      plugin.g
+  const alg = plugin.g.algs[subtype]
+  if (!alg) return Promise.resolve([])
+  const resultsPromise = alg(currNode).then(
+    (rawResults) => {
+      const results = rawResults as ResultMap
+      return plugin.g!
         .nodes()
         .map((to) => {
           const { measure, extra } = results[to] as {
@@ -319,6 +323,7 @@ export function getPromiseResults(
             ? greater
             : lesser
         })
+    }
   )
   return resultsPromise
 }
@@ -339,7 +344,7 @@ export function getMaxKey(obj: Record<string, number>) {
 }
 
 export const isImg = (path: string) =>
-  IMG_EXTENSIONS.includes(path.split('.').last())
+  IMG_EXTENSIONS.includes(path.split('.').last() ?? '')
 
 export async function openOrSwitch(
   app: App,
@@ -354,18 +359,21 @@ export async function openOrSwitch(
 
   // If dest doesn't exist, make it
   if (!destFile && options.createNewFile) {
-    destFile = await createNewMDNote(app, dest)
+    // @ts-expect-error
+    destFile = await createNewMDNote(dest, '')
   } else if (!destFile && !options.createNewFile) return
 
   // Check if it's already open
   const leavesWithDestAlreadyOpen: WorkspaceLeaf[] = []
   workspace.iterateAllLeaves((leaf) => {
     if (leaf.view instanceof MarkdownView) {
-      if (leaf.view?.file?.path === destFile.path) {
+      if (leaf.view?.file?.path === destFile?.path) {
         leavesWithDestAlreadyOpen.push(leaf)
       }
     }
   })
+
+  if (!destFile) return
 
   const openInNewTab =
     event.ctrlKey || event.getModifierState('Meta') || event.button === 1
@@ -375,13 +383,13 @@ export async function openOrSwitch(
     workspace.setActiveLeaf(leavesWithDestAlreadyOpen[0])
   } else {
     event.preventDefault()
-    // @ts-ignore
+    // @ts-expect-error
     const mode = app.vault.getConfig('defaultViewMode') as string
     const leaf = openInNewTab
       ? workspace.splitActiveLeaf()
       : workspace.getUnpinnedLeaf()
 
-    await leaf.openFile(destFile, { active: true, mode })
+    await leaf.openFile(destFile, { active: true })
   }
 }
 
@@ -436,7 +444,8 @@ export async function addLinkToMoc(
     const result = _addLinkToMocRelateds(
       content,
       fileToLink.basename,
-      app.vault.getConfig('tabSize')
+      // @ts-expect-error - getConfig is not in the type definitions but exists at runtime
+      app.vault.getConfig('tabSize') as number
     )
 
     if (result.success) {
