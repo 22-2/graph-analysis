@@ -117,7 +117,7 @@ export default class GraphAnalysisPlugin extends Plugin {
   private registerViews() {
     this.registerView(
       VIEW_TYPE_GRAPH_ANALYSIS,
-      (leaf: WorkspaceLeaf) => new AnalysisView(leaf, this, null)
+      (leaf: WorkspaceLeaf) => new AnalysisView(leaf, this, "Adamic Adar")
     )
     this.addSettingTab(new SampleSettingTab(this.app, this))
   }
@@ -159,7 +159,7 @@ export default class GraphAnalysisPlugin extends Plugin {
     const view = this.app.workspace
       .getLeavesOfType(VIEW_TYPE_GRAPH_ANALYSIS)
       .first()?.view as AnalysisView
-    return view?.leaf.isVisible()
+    return (view?.leaf as unknown as { isVisible(): boolean }).isVisible()
   }
 
   // --- コアロジック ---

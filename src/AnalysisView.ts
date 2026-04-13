@@ -13,7 +13,7 @@ export default class AnalysisView extends ItemView {
   constructor(
     leaf: WorkspaceLeaf,
     plugin: GraphAnalysisPlugin,
-    currSubtype: Subtype | null
+    currSubtype: Subtype
   ) {
     super(leaf)
     this.plugin = plugin
