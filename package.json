@@ -36,8 +36,7 @@
     "obsidian-community-lib": "2.0.2",
     "sbd": "^1.0.19",
     "standard-version": "^9.5.0",
-    "svelte": "5.55.3",
-    "svelte-icons": "^2.1.0"
+    "svelte": "5.55.3"
   },
   "packageManager": "pnpm@10.28.1"
 }

@@ -1,12 +1,12 @@
 <script lang="ts">
   import type { SubtypeInfo } from 'src/Interfaces'
-  import FaRegQuestionCircle from 'svelte-icons/fa/FaRegQuestionCircle.svelte'
+  import ObsidianIcon from 'src/Components/ObsidianIcon.svelte'
 
-  let { currSubtypeInfo } = $props<{ currSubtypeInfo: SubtypeInfo }>()
+  let { currSubtypeInfo }: { currSubtypeInfo: SubtypeInfo } = $props()
 
   const { anl, desc } = currSubtypeInfo
 </script>
 
 <div aria-label={`Type: ${anl}\n\n${desc}`}>
-  <FaRegQuestionCircle />
+  <ObsidianIcon iconName="help-circle" />
 </div>

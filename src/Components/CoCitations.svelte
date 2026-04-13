@@ -15,7 +15,7 @@
     openOrSwitch,
     presentPath,
   } from 'src/Utility'
-  import FaLink from 'svelte-icons/fa/FaLink.svelte'
+  import ObsidianIcon from 'src/Components/ObsidianIcon.svelte'
   import ExtensionIcon from './ExtensionIcon.svelte'
   import ImgThumbnail from './ImgThumbnail.svelte'
   import RenderedMarkdown from './RenderedMarkdown.svelte'
@@ -33,7 +33,7 @@
     app,
     view,
     visibleData,
-  } = $props<{
+  }: {
     app: App
     view: AnalysisView
     visibleData: ComponentResult[]
@@ -41,7 +41,7 @@
     plugin: GraphAnalysisPlugin
     settings: GraphAnalysisSettings
     currNode: string
-  }>()
+  } = $props()
 </script>
 
 <div class="GA-CCs">
@@ -64,7 +64,7 @@
                 onmouseover={(e) => hoverPreview(e, view, dropPath(node.to))}
               >
                 {#if node.linked}
-                  <span class={ICON}><FaLink /></span>
+                  <span class={ICON}><ObsidianIcon iconName="link" /></span>
                 {/if}
                 <ExtensionIcon path={node.to} />
                 <span

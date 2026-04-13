@@ -3,17 +3,7 @@
   import type AnalysisView from 'src/AnalysisView'
   import type { SubtypeInfo } from 'src/Interfaces'
   import type GraphAnalysisPlugin from 'src/main'
-  import FaCreativeCommonsZero from 'svelte-icons/fa/FaCreativeCommonsZero.svelte'
-  import FaFire from 'svelte-icons/fa/FaFire.svelte'
-  import FaLink from 'svelte-icons/fa/FaLink.svelte'
-  import FaRegSnowflake from 'svelte-icons/fa/FaRegSnowflake.svelte'
-  import FaUnlink from 'svelte-icons/fa/FaUnlink.svelte'
-  import GoSignIn from 'svelte-icons/go/GoSignIn.svelte'
-  import GoSignOut from 'svelte-icons/go/GoSignOut.svelte'
-  import IoIosTrendingDown from 'svelte-icons/io/IoIosTrendingDown.svelte'
-  import IoIosTrendingUp from 'svelte-icons/io/IoIosTrendingUp.svelte'
-  import IoMdRefresh from 'svelte-icons/io/IoMdRefresh.svelte'
-  import MdExposureZero from 'svelte-icons/md/MdExposureZero.svelte'
+  import ObsidianIcon from 'src/Components/ObsidianIcon.svelte'
   import InfoIcon from './InfoIcon.svelte'
 
   type SubtypeOptionsProps = {
@@ -40,7 +30,7 @@
     plugin,
     app,
     view,
-  } = $props<SubtypeOptionsProps>()
+  }: SubtypeOptionsProps = $props()
 </script>
 
 <span class="GA-Subtype-Options">
@@ -63,9 +53,9 @@
     >
       <span class="icon">
         {#if excludeLinked}
-          <FaUnlink />
+          <ObsidianIcon iconName="link-2-off" />
         {:else}
-          <FaLink />
+          <ObsidianIcon iconName="link" />
         {/if}
       </span>
     </span>
@@ -80,9 +70,9 @@
     >
       <span class="icon">
         {#if noZero}
-          <MdExposureZero />
+          <ObsidianIcon iconName="circle-slash" />
         {:else}
-          <FaCreativeCommonsZero />
+          <ObsidianIcon iconName="circle" />
         {/if}
       </span>
     </span>
@@ -97,9 +87,9 @@
     >
       <span class="icon">
         {#if ascOrder}
-          <IoIosTrendingUp />
+          <ObsidianIcon iconName="trending-up" />
         {:else}
-          <IoIosTrendingDown />
+          <ObsidianIcon iconName="trending-down" />
         {/if}
       </span>
     </span>
@@ -118,9 +108,9 @@
     >
       <span class="icon">
         {#if frozen}
-          <FaRegSnowflake />
+          <ObsidianIcon iconName="snowflake" />
         {:else}
-          <FaFire />
+          <ObsidianIcon iconName="flame" />
         {/if}
       </span>
     </span>
@@ -136,9 +126,9 @@
     >
       <span class="icon">
         {#if sortBy}
-          <GoSignIn />
+          <ObsidianIcon iconName="log-in" />
         {:else}
-          <GoSignOut />
+          <ObsidianIcon iconName="log-out" />
         {/if}
       </span>
     </span>
@@ -152,7 +142,7 @@
     }}
   >
     <span class="icon">
-      <IoMdRefresh />
+      <ObsidianIcon iconName="refresh-cw" />
     </span>
   </span>
 </span>

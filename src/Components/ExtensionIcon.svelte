@@ -1,17 +1,6 @@
 <script lang="ts">
   import { isImg } from 'src/Utility'
-  import DiHtml5 from 'svelte-icons/di/DiHtml5.svelte'
-  import FaFile from 'svelte-icons/fa/FaFile.svelte'
-  import FaFileAudio from 'svelte-icons/fa/FaFileAudio.svelte'
-  import FaFileCode from 'svelte-icons/fa/FaFileCode.svelte'
-  import FaFileCsv from 'svelte-icons/fa/FaFileCsv.svelte'
-  import FaFileExcel from 'svelte-icons/fa/FaFileExcel.svelte'
-  import FaFileImage from 'svelte-icons/fa/FaFileImage.svelte'
-  import FaFilePdf from 'svelte-icons/fa/FaFilePdf.svelte'
-  import FaFilePowerpoint from 'svelte-icons/fa/FaFilePowerpoint.svelte'
-  import FaFileVideo from 'svelte-icons/fa/FaFileVideo.svelte'
-  import FaFileWord from 'svelte-icons/fa/FaFileWord.svelte'
-  import FaStickyNote from 'svelte-icons/fa/FaStickyNote.svelte'
+  import ObsidianIcon from 'src/Components/ObsidianIcon.svelte'
   import { ICON } from 'src/Constants'
 
   let { path } = $props<{ path: string }>()
@@ -20,29 +9,29 @@
 {#if !path.endsWith('.md')}
   <span class={ICON}>
     {#if isImg(path)}
-      <FaFileImage />
+      <ObsidianIcon iconName="image" />
     {:else if path.endsWith('.html')}
-      <DiHtml5 />
+      <ObsidianIcon iconName="code" />
     {:else if path.endsWith('.xls') || path.endsWith('.xlsx')}
-      <FaFileExcel />
+      <ObsidianIcon iconName="table" />
     {:else if path.endsWith('.csv')}
-      <FaFileCsv />
+      <ObsidianIcon iconName="table" />
     {:else if path.endsWith('.pdf')}
-      <FaFilePdf />
+      <ObsidianIcon iconName="file-text" />
     {:else if path.endsWith('.txt')}
-      <FaStickyNote />
+      <ObsidianIcon iconName="document" />
     {:else if path.endsWith('.mp3') || path.endsWith('opus')}
-      <FaFileAudio />
+      <ObsidianIcon iconName="audio-file" />
     {:else if path.endsWith('.mp4') || path.endsWith('.webm')}
-      <FaFileVideo />
+      <ObsidianIcon iconName="video-file" />
     {:else if path.endsWith('.docx') || path.endsWith('.doc')}
-      <FaFileWord />
+      <ObsidianIcon iconName="document" />
     {:else if path.endsWith('.ppt') || path.endsWith('.pptx')}
-      <FaFilePowerpoint />
+      <ObsidianIcon iconName="presentation" />
     {:else if path.endsWith('.js') || path.endsWith('.ts') || path.endsWith('.c') || path.endsWith('.py')}
-      <FaFileCode />
+      <ObsidianIcon iconName="code" />
     {:else}
-      <FaFile />
+      <ObsidianIcon iconName="document" />
     {/if}
   </span>
 {/if}

@@ -13,7 +13,7 @@
     openOrSwitch,
     presentPath,
   } from 'src/Utility'
-  import FaLink from 'svelte-icons/fa/FaLink.svelte'
+  import ObsidianIcon from 'src/Components/ObsidianIcon.svelte'
   import ExtensionIcon from './ExtensionIcon.svelte'
   import ImgThumbnail from './ImgThumbnail.svelte'
 
@@ -32,7 +32,7 @@
     currNode,
     visibleData,
     currSubtypeInfo,
-  } = $props<{
+  }: {
     app: App
     view: AnalysisView
     currNode: string
@@ -41,7 +41,7 @@
     // Unused props to match signature
     plugin: GraphAnalysisPlugin
     settings: GraphAnalysisSettings
-  }>()
+  } = $props()
 </script>
 
 <div>
@@ -69,7 +69,7 @@
             >
               {#if node.linked}
                 <span class={ICON}>
-                  <FaLink />
+                  <ObsidianIcon iconName="link" />
                 </span>
               {/if}
 
