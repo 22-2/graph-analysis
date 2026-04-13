@@ -34,6 +34,7 @@ export default class GraphAnalysisPlugin extends Plugin {
 
       // ワークスペースの準備が整い、メタデータが解決された後にグラフを初期化
       this.handleLayoutReady()
+      setTimeout(() => this.tryExecutePendingRefresh());
     });
   }
 
