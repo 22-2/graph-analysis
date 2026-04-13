@@ -43,7 +43,6 @@
   {/if}
 
   {#if excludeLinked !== undefined}
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
     <span
       class="GA-Option-span"
       aria-label={excludeLinked ? 'Show Linked Notes' : 'Exclude Linked Notes'}
@@ -95,7 +94,6 @@
     </span>
   {/if}
   {#if frozen !== undefined}
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
     <span
       class="GA-Option-span"
       aria-label={frozen ? `Frozen on: ${currFile?.basename}` : 'Unfrozen'}
@@ -116,7 +114,6 @@
     </span>
   {/if}
   {#if sortBy !== undefined}
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
     <span
       class="GA-Option-span"
       aria-label="Sort By: {sortBy ? 'Authority' : 'Hub'}"
@@ -133,7 +130,6 @@
       </span>
     </span>
   {/if}
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
   <span
     class="GA-Option-span"
     aria-label="Refresh Index"

@@ -50,8 +50,6 @@
             oncontextmenu={(e) => openMenu(e, app, { nodePath: node.to })}
           >
             <span class="top-row">
-              <!-- svelte-ignore a11y_mouse_events_have_key_events -->
-              <!-- svelte-ignore a11y_no_static_element_interactions -->
               <span
                 onmousedown={async (e) => {
                   if (e.button === 0 || e.button === 1)

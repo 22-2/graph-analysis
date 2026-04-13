@@ -14,7 +14,6 @@
 
 {#await img then src}
   <div class="GA-img">
-    <!-- svelte-ignore a11y_missing_attribute -->
     <img src={'data:image/jpg;base64, ' + _arrayBufferToBase64(src)} />
   </div>
 {/await}

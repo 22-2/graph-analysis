@@ -54,7 +54,6 @@
     <tbody>
       {#each visibleData as node (node.to)}
         {#if currSubtypeInfo.global || node.to !== currNode}
-          <!-- svelte-ignore a11y_unknown_aria_attribute -->
           <tr class="{node.linked ? LINKED : NOT_LINKED} {classExt(node.to)}">
             <td
               aria-label={node.extra?.map(presentPath).join('\n')}
