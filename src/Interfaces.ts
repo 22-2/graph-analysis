@@ -53,7 +53,7 @@ type PagerankMapping = ResultMap
 type BetweennessCentralityMapping = ResultMap
 
 export type HITSResult = {
-  converged: boolean
+  converged?: boolean
   authorities: { [node: string]: number }
   hubs: { [node: string]: number }
 }
@@ -93,7 +93,7 @@ export interface LineSentences {
   link: ReferenceCache
 }
 
-export type AnalysisAlg<T> = (a: string, options?: {}) => Promise<T>
+export type AnalysisAlg<T> = (a: string, options?: any) => Promise<T>
 
 export interface GraphAnalysisSettings {
   noInfinity: boolean

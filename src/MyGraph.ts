@@ -153,11 +153,11 @@ export default class MyGraph extends Graph {
 
   // --- 分析アルゴリズムっす ---
 
-  algs: {
+  algs: Partial<{
     [subtype in Subtype]: AnalysisAlg<
       ResultMap | CoCitationMap | Communities | string[] | HITSResult
     >
-  } = {
+  }> = {
     // Random: async (a :string) => {
     //   sampleSize(this.nodes(), 50)
     // },
@@ -315,7 +315,7 @@ export default class MyGraph extends Graph {
 
     'Label Propagation': async (
       a: string,
-      options: { iterations: number }
+      options: { iterations: number } = { iterations: 10 }
     ): Promise<Communities> => {
       let labeledNodes: { [node: string]: string } = {}
       this.forEachNode((node) => {
@@ -438,12 +438,13 @@ export default class MyGraph extends Graph {
       maxHeadingLevel = 0
     const ownHeadings: [HeadingCache, number][] = []
     if (cache.headings) {
+      const headings = cache.headings
       ownLinks.forEach((link) => {
-        cache.headings.forEach((heading, index) => {
+        headings.forEach((heading, index) => {
           minHeadingLevel = Math.min(minHeadingLevel, heading.level)
           maxHeadingLevel = Math.max(maxHeadingLevel, heading.level)
           if (heading.position.start.line <= link.position.start.line) {
-            const nextHeading = cache.headings
+            const nextHeading = headings
               .slice(index + 1)
               .find((h) => h.level <= heading.level)
             const endLine = nextHeading
@@ -705,7 +706,7 @@ export default class MyGraph extends Graph {
             if (current.parent === to.position.start.line) {
               return 0.6 - Math.min(distance, 3) * 0.1 // 1:0.6, 2:0.5, 3:0.4 ...
             }
-            const parent = cache.listItems.find(
+            const parent = cache.listItems?.find(
               (li) => li.position.start.line === current.parent
             )
             if (!parent) break
@@ -734,14 +735,58 @@ export default class MyGraph extends Graph {
   }
 
   /** 段落内での共引用を評価するっす */
-  private evaluateParagraphContext(/* ... */): boolean {
-    /* ...実装... */ return false
+  private evaluateParagraphContext(
+    item: CacheItem,
+    details: ReturnType<typeof this.extractOwnLinkDetails>,
+    lines: string[],
+    pre: string,
+    preCocitations: { [name: string]: [number, CoCitation[]] },
+    linkPath: string
+  ): boolean {
+    const sameParagraph = details.ownSections.find(
+      (section) =>
+        section.position.start.line <= item.position.start.line &&
+        section.position.end.line >= item.position.end.line
+    )
+    if (!sameParagraph) return false
+
+    const lineContent = lines[item.position.start.line]
+    const sentence = [
+      lineContent.slice(0, item.position.start.col),
+      lineContent.slice(item.position.start.col, item.position.end.col),
+      lineContent.slice(item.position.end.col),
+    ]
+    addPreCocitation(preCocitations, linkPath, 1 / 4, sentence, pre, item.position.start.line)
+    return true
   }
+
   /** 見出し内での共引用を評価するっす */
-  private evaluateHeadingContext(/* ... */): boolean {
-    /* ...実装... */ return false
+  private evaluateHeadingContext(
+    item: CacheItem,
+    details: ReturnType<typeof this.extractOwnLinkDetails>,
+    lines: string[],
+    pre: string,
+    preCocitations: { [name: string]: [number, CoCitation[]] },
+    linkPath: string
+  ): boolean {
+    const headingMatches = details.ownHeadings.filter(
+      ([heading, end]) =>
+        heading.position.start.line <= item.position.start.line &&
+        end > item.position.end.line
+    )
+    if (headingMatches.length === 0) return false
+
+    const lineContent = lines[item.position.start.line]
+    const sentence = [
+      lineContent.slice(0, item.position.start.col),
+      lineContent.slice(item.position.start.col, item.position.end.col),
+      lineContent.slice(item.position.end.col),
+    ]
+    const bestLevel = Math.max(...headingMatches.map(([heading]) => heading.level))
+    const score = 1 / Math.pow(2, 3 + details.maxHeadingLevel - bestLevel)
+    addPreCocitation(preCocitations, linkPath, score, sentence, pre, item.position.start.line)
+    return true
   }
-  // (注: `evaluateParagraphContext` と `evaluateHeadingContext` の実装は元のロジックを参考に同様に分割できますが、ここでは簡略化のため省略しています)
 
   /** YAMLフロントマターのタグを結果に追加するっす */
   private addYamlTagsToPreCocitations(
@@ -750,7 +795,7 @@ export default class MyGraph extends Graph {
     pre: string,
     minScore: number
   ) {
-    getAllTags(cache).forEach((tag) => {
+    getAllTags(cache)?.forEach((tag) => {
       if (!(tag in preCocitations)) {
         preCocitations[tag] = [
           minScore,
