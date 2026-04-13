@@ -42,6 +42,7 @@ import {
   getMaxKey,
   roundNumber,
   sum,
+  uniqueArray,
 } from 'src/Utility'
 
 export default class MyGraph extends Graph {
@@ -64,10 +65,10 @@ export default class MyGraph extends Graph {
     const regex = new RegExp(exclusionRegex, 'i')
     let i = 0
 
-    const includeTag = (tags: TagCache[] | undefined) =>
+    const includeTag = (tags: string[] | undefined) =>
       exclusionTags.length === 0 ||
       !tags ||
-      tags.findIndex((t) => exclusionTags.includes(t.tag)) === -1
+      tags.findIndex((t) => exclusionTags.includes(t)) === -1
     const includeRegex = (node: string) =>
       exclusionRegex === '' || !regex.test(node)
     const includeExt = (node: string) =>
@@ -81,16 +82,14 @@ export default class MyGraph extends Graph {
     }
 
     for (const source in resolvedLinks) {
-      const sourceTags = this.app.metadataCache.getCache(source)?.tags
-      if (
-        includeTag(sourceTags) &&
-        includeRegex(source) &&
-        includeExt(source)
-      ) {
+      const sourceCache = this.app.metadataCache.getCache(source)
+      const sourceTags = uniqueArray(sourceCache ? getAllTags(sourceCache) : null)
+      if (includeTag(sourceTags) && includeRegex(source) && includeExt(source)) {
         addNodeIfNotExists(source)
 
         for (const dest in resolvedLinks[source]) {
-          const destTags = this.app.metadataCache.getCache(dest)?.tags
+          const destCache = this.app.metadataCache.getCache(dest)
+          const destTags = uniqueArray(destCache ? getAllTags(destCache) : null)
           if (includeTag(destTags) && includeRegex(dest) && includeExt(dest)) {
             addNodeIfNotExists(dest)
             this.addEdge(source, dest, { resolved: true })

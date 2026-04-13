@@ -633,3 +633,6 @@ export function isLinked(
 export const addMD = (noteName: string): string => {
   return noteName?.match(/\.MD$|\.md$/m) ? noteName : noteName + '.md'
 }
+
+export const uniqueArray = <T>(arr: T[] | null): T[] =>
+  arr ? [...new Set(arr)] : []
