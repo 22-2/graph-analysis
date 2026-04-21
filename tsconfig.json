@@ -7,9 +7,10 @@
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "baseUrl": ".",
+    "paths": {
+      "*": ["./*"]
+    },
     "verbatimModuleSyntax": true,
-    "downlevelIteration": true,
     "resolveJsonModule": true,
     "lib": ["DOM", "ESNext"],
     "types": ["node", "svelte", "obsidian-typings"]
