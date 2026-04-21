@@ -134,7 +134,8 @@
     class="GA-Option-span"
     aria-label="Refresh Index"
     onclick={async () => {
-      await plugin.refreshGraphAndViews()
+      // Refresh Index はユーザー操作による再抽選意図があるため、キャッシュを使わず再計算するっす
+      await plugin.refreshGraphAndViews(true)
     }}
   >
     <span class="icon">

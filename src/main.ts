@@ -177,8 +177,12 @@ export default class GraphAnalysisPlugin extends Plugin {
   /**
    * グラフデータを更新し、現在開いている分析ビューを再描画します。
    */
-  public async refreshGraphAndViews() {
+  public async refreshGraphAndViews(forceRecompute = false) {
     await this.refreshGraph()
+    if (forceRecompute) {
+      // 手動リフレッシュ時は結果を必ず再計算して、Randomの固定化を防ぐためにキャッシュを明示的に破棄するっす
+      this.analysisCache.clear()
+    }
     const view = this.getCurrentView(false) // 存在しない場合は開かない
     if (view) {
       await view.draw(view.currSubtype)
