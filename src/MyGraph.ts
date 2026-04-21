@@ -4,6 +4,7 @@ import louvain from 'graphology-communities-louvain'
 import betweenness from 'graphology-metrics/centrality/betweenness'
 import hits from 'graphology-metrics/centrality/hits'
 import pageRank from 'graphology-metrics/centrality/pagerank'
+import { sampleSize } from 'es-toolkit'
 
 import {
   App,
@@ -147,9 +148,17 @@ export default class MyGraph extends Graph {
   algs: Partial<{
     [S in Subtype]: AnalysisAlg<AnalysisCacheMap[S]>
   }> = {
-    // Random: async (a :string) => {
-    //   sampleSize(this.nodes(), 50)
-    // },
+    Random: async (_a: string): Promise<ResultMap> => {
+      const results: ResultMap = {}
+      // ランダム候補を常に一定件数に近づけるため、全ノードから最大50件を抽出してスコア1を付けるっす
+      const randomNodes = new Set(sampleSize(this.nodes(), Math.min(50, this.order)))
+
+      this.forEachNode((to) => {
+        results[to] = { measure: randomNodes.has(to) ? 1 : 0, extra: [] }
+      })
+
+      return results
+    },
 
     Jaccard: async (a: string): Promise<ResultMap> => {
       const results: ResultMap = {}

@@ -46,6 +46,7 @@
   const BATCH_SIZE = 50
 
   const COMPONENT_MAP: Partial<Record<Subtype, Component<any>>> = {
+    'Random':                TableComponent,
     'Adamic Adar':           TableComponent,
     'Common Neighbours':     TableComponent,
     'Jaccard':               TableComponent,

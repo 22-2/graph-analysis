@@ -24,6 +24,7 @@ export type Analyses =
   | 'NLP'
 
 export type Subtype =
+  | 'Random'
   | 'HITS'
   | 'Adamic Adar'
   | 'Common Neighbours'
@@ -46,10 +47,6 @@ export interface Communities {
 export interface ResultMap {
   [to: string]: { measure: number; extra: string[] }
 }
-
-type PagerankMapping = ResultMap
-
-type BetweennessCentralityMapping = ResultMap
 
 export type HITSResult = {
   converged?: boolean
@@ -130,6 +127,7 @@ export type AnalysisCacheValue =
 
 /** サブタイプごとのキャッシュ値の型マップ */
 export interface AnalysisCacheMap {
+  Random: ResultMap
   HITS: HITSResult
   'Co-Citations': CoCitationMap
   Louvain: string[]
