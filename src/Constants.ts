@@ -38,6 +38,14 @@ export const ICON = 'GA-icon'
 
 export const ANALYSIS_TYPES: SubtypeInfo[] = [
   {
+    anl: 'Random',
+    subtype: 'Random',
+    desc: 'ランダムにノートを選びます。',
+    global: true,
+    nlp: false,
+    shortDesc: 'ランダムにノートを選びます。',
+  },
+  {
     anl: 'Co-Citations',
     subtype: 'Co-Citations',
     desc: 'どのノートが最も頻繁に一緒に参照されているかを確認します。',

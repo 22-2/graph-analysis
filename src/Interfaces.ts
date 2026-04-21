@@ -16,6 +16,7 @@ export type SubtypeInfo = {
 }
 
 export type Analyses =
+  | 'Random'
   | 'Centrality'
   | 'Link Prediction'
   | 'Similarity'
