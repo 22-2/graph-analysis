@@ -1,6 +1,7 @@
 import {
   App,
   ItemView,
+  Keymap,
   MarkdownView,
   Menu,
   Notice,
@@ -268,46 +269,37 @@ export async function openOrSwitch(
   app: App,
   dest: string,
   event: MouseEvent,
-  options: {
-    createNewFile: boolean
-  } = { createNewFile: true }
+  options = { createNewFile: true }
 ): Promise<void> {
-  const { workspace } = app
-  let destFile = app.metadataCache.getFirstLinkpathDest(dest, '')
+  const { workspace, metadataCache } = app;
 
-  // If dest doesn't exist, make it
-  if (!destFile && options.createNewFile) {
+  let destFile = metadataCache.getFirstLinkpathDest(dest, '');
+
+  // ファイルがない場合の作成処理
+  if (!destFile) {
+    if (!options.createNewFile) return;
     // @ts-expect-error
-    destFile = await createNewMDNote(dest, '')
-  } else if (!destFile && !options.createNewFile) return
+    destFile = await createNewMDNote(dest, '');
+  }
 
-  // Check if it's already open
-  const leavesWithDestAlreadyOpen: WorkspaceLeaf[] = []
-  workspace.iterateAllLeaves((leaf) => {
-    if (leaf.view instanceof MarkdownView) {
-      if (leaf.view?.file?.path === destFile?.path) {
-        leavesWithDestAlreadyOpen.push(leaf)
-      }
-    }
-  })
+  if (!destFile) return;
 
-  if (!destFile) return
+  // Ctrl/Metaキー、または中クリックなら新しいタブで開く
+  const openInNewTab = Keymap.isModEvent(event) || event.button === 1;
 
-  const openInNewTab =
-    event.ctrlKey || event.getModifierState('Meta') || event.button === 1
+  // 既に開いているLeafを探す
+  const existingLeaf = workspace.getLeavesOfType('markdown').find((leaf) =>
+    leaf.view instanceof MarkdownView && leaf.view.file?.path === destFile?.path
+  );
 
-  // Rather switch to it if it is open
-  if (leavesWithDestAlreadyOpen.length > 0 && !openInNewTab) {
-    workspace.setActiveLeaf(leavesWithDestAlreadyOpen[0])
+  if (existingLeaf && !openInNewTab) {
+    // 既に開いていて、新規タブ指定がなければそのLeafをアクティブにする
+    workspace.setActiveLeaf(existingLeaf, { focus: true });
   } else {
-    event.preventDefault()
-    // @ts-expect-error
-    const mode = app.vault.getConfig('defaultViewMode') as string
-    const leaf = openInNewTab
-      ? workspace.splitActiveLeaf()
-      : workspace.getUnpinnedLeaf()
-
-    await leaf.openFile(destFile, { active: true })
+    // 新規タブ、または空いているLeaf（Unpinned）を取得して開く
+    const leaf = workspace.getLeaf(openInNewTab ? 'tab' : false);
+    await leaf.openFile(destFile, { active: true });
+    event.preventDefault();
   }
 }
 
