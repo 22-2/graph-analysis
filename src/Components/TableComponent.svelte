@@ -57,9 +57,19 @@
           <tr class="{node.linked ? LINKED : NOT_LINKED} {classExt(node.to)}">
             <td
               aria-label={node.extra?.map(presentPath).join('\n')}
+              onclick={async (e) => {
+                await openOrSwitch(app, node.to, e)
+              }}
               onmousedown={async (e) => {
-                if (e.button === 0 || e.button === 1)
+                if (e.button === 1) {
+                  e.preventDefault();
                   await openOrSwitch(app, node.to, e)
+                }
+              }}
+              onauxclick={async (e) => {
+                if (e.button === 2) {
+                  await openOrSwitch(app, node.to, e)
+                }
               }}
               oncontextmenu={(e) => openMenu(e, app, { nodePath: node.to })}
               onmouseover={(e) => hoverPreview(e, view, dropPath(node.to))}
