@@ -298,7 +298,8 @@ export async function openOrSwitch(
   } else {
     // 新規タブ、または空いているLeaf（Unpinned）を取得して開く
     const leaf = workspace.getLeaf(openInNewTab ? 'tab' : false);
-    await leaf.openFile(destFile, { active: true });
+    // 中クリックは新しいタブをバックグラウンドで開き、元のタブへのフォーカスを残す
+    await leaf.openFile(destFile, { active: event.button !== 1 });
     event.preventDefault();
   }
 }
