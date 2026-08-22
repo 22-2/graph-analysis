@@ -495,17 +495,17 @@ export async function openView<YourView extends ItemView>(
   let leaf: WorkspaceLeaf = null
   for (leaf of app.workspace.getLeavesOfType(viewType)) {
     if (leaf.view instanceof viewClass) {
+      // コマンドから再表示したときも、既存ビューを確実に前面へ出す。
+      await app.workspace.revealLeaf(leaf)
       return leaf.view
     }
     await leaf.setViewState({ type: 'empty' })
     break
   }
 
-  // @ts-expect-error
-  leaf =
-    (leaf ?? side === 'right')
-      ? app.workspace.getRightLeaf(false)
-      : app.workspace.getLeftLeaf(false)
+  leaf = leaf ?? (side === 'right'
+    ? app.workspace.getRightLeaf(false)
+    : app.workspace.getLeftLeaf(false))
 
   await leaf.setViewState({
     type: viewType,

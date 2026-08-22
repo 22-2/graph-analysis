@@ -76,18 +76,9 @@ export default class GraphAnalysisPlugin extends Plugin {
     this.addCommand({
       id: 'show-graph-analysis-view',
       name: 'Open Graph Analysis View',
-      checkCallback: (checking: boolean) => {
-        // ビューがまだ開かれていない場合のみコマンドを有効にする
-        const viewExists =
-          this.app.workspace.getLeavesOfType(VIEW_TYPE_GRAPH_ANALYSIS).length >
-          0
-        if (!viewExists) {
-          if (!checking) {
-            this.activateAnalysisView()
-          }
-          return true
-        }
-        return false
+      callback: async () => {
+        // 既存ビューも前面に出せるようにし、コマンドを常に利用可能にする。
+        await this.activateAnalysisView()
       },
     })
 
