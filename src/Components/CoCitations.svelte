@@ -38,6 +38,13 @@
     its?: number
     resolution?: number
   } = $props()
+
+  function preventAutoscroll(event: MouseEvent): void {
+    if (event.button === 1) {
+      // Co-citation entries are interactive spans inside a summary, so stop autoscroll at mousedown.
+      event.preventDefault()
+    }
+  }
 </script>
 
 <div class="GA-CCs">
@@ -47,11 +54,13 @@
         <details class="tree-item-self">
           <summary
             class="tree-item-inner"
+            onmousedown={preventAutoscroll}
             oncontextmenu={(e) => openMenu(e, app, { nodePath: node.to })}
           >
             <span class="top-row">
               <span
                 onmousedown={async (e) => {
+                  preventAutoscroll(e)
                   if (e.button === 0 || e.button === 1)
                     await openOrSwitch(app, node.to, e)
                 }}
@@ -75,6 +84,7 @@
                   <span
                     class="internal-link"
                     onmousedown={async (e) => {
+                      preventAutoscroll(e)
                       if (e.button === 0 || e.button === 1)
                         await openOrSwitch(app, citation.source, e)
                     }}

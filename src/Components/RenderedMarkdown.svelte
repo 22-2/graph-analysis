@@ -40,6 +40,10 @@
   class="CC-sentence"
   bind:this={el}
   onmousedown={async (e) => {
+    if (e.button === 1) {
+      // Prevent autoscroll before opening the source note and jumping to its citation.
+      e.preventDefault()
+    }
     if (e.button === 0 || e.button === 1) {
       await openOrSwitch(app, sourcePath, e)
       jumpToSelection(app, line, sentence.join(''))

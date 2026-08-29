@@ -54,8 +54,13 @@
         <tr class="{classExt(node.to)}">
           <td
             onmousedown={async (e) => {
-              if (e.button === 0 || e.button === 1)
+              if (e.button === 1) {
+                // Prevent the browser's autoscroll mode before the async tab-opening work.
+                e.preventDefault()
                 await openOrSwitch(app, node.to, e)
+              } else if (e.button === 0) {
+                await openOrSwitch(app, node.to, e)
+              }
             }}
             oncontextmenu={(e) => openMenu(e, app, { nodePath: node.to })}
             onmouseover={(e) => hoverPreview(e, view, dropPath(node.to))}

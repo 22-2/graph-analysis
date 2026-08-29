@@ -62,6 +62,7 @@
               }}
               onmousedown={async (e) => {
                 if (e.button === 1) {
+                  // Prevent the browser's autoscroll mode before the async tab-opening work.
                   e.preventDefault();
                   await openOrSwitch(app, node.to, e)
                 }
