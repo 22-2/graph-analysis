@@ -3,5 +3,4 @@ allowBuilds:
   core-js: true
   electron: true
   esbuild: true
-  obsidian-typings: true
   svelte-preprocess: true

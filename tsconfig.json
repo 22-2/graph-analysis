@@ -13,7 +13,7 @@
     "verbatimModuleSyntax": true,
     "resolveJsonModule": true,
     "lib": ["DOM", "ESNext"],
-    "types": ["node", "svelte", "obsidian-typings"]
+    "types": ["node", "svelte", "@obsidian-typings/obsidian-public-latest"]
   },
   "include": ["src/**/*", "src/*", "**/*.ts", "**/*.svelte"],
   "exclude": ["node_modules/*"]

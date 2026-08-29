@@ -1,6 +1,7 @@
+/* @ts-check */
 import esbuild from 'esbuild'
 import process from 'process'
-import builtins from 'builtin-modules'
+import { builtinModules } from 'node:module'
 import esbuildSvelte from 'esbuild-svelte' // 可能会报错，需要将`??`改成一般的三元运算符
 import { sveltePreprocess } from 'svelte-preprocess'
 
@@ -41,7 +42,8 @@ const context = await esbuild.context({
     '@lezer/common',
     '@lezer/highlight',
     '@lezer/lr',
-    ...builtins,
+    'node:*',
+    ...builtinModules,
   ],
   format: 'cjs',
   target: 'es2018',
