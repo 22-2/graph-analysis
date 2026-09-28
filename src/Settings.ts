@@ -8,8 +8,8 @@ import {
 import { ANALYSIS_TYPES, VIEW_TYPE_GRAPH_ANALYSIS } from 'src/Constants'
 import type { Subtype } from 'src/Interfaces'
 import type GraphAnalysisPlugin from 'src/main'
-import { getAlgorithmDisplayName } from 'src/Utility'
 import AnalysisView from './AnalysisView'
+import { getSettingsLanguage, getSettingsText } from './SettingsLocalization'
 
 function addInlineValidationMessage(setting: Setting): {
   setMessage: (message: string) => void
@@ -40,16 +40,23 @@ export class SampleSettingTab extends PluginSettingTab {
 
   override getSettingDefinitions(): SettingDefinitionItem[] {
     const { settings } = this.plugin
+    const language = getSettingsLanguage(settings.settingsLanguage ?? 'system')
+    const text = getSettingsText(language)
+    const getAlgorithmName = (subtype: Subtype) => {
+      const algorithmName = text.algorithmNames[subtype]
+      const customName = settings.algorithmRenames[subtype]?.trim()
+      return customName ? `${customName} (${algorithmName})` : algorithmName
+    }
     const defaultSubtypeOptions = Object.fromEntries(
       settings.algsToShow.map((subtype) => [
         subtype,
-        getAlgorithmDisplayName(subtype, settings),
+        getAlgorithmName(subtype),
       ])
     )
 
     const algorithmSettings: SettingDefinition[] = ANALYSIS_TYPES.map((sub) => ({
-      name: sub.subtype,
-      desc: sub.shortDesc,
+      name: text.algorithmNames[sub.subtype],
+      desc: text.algorithmDescriptions[sub.subtype] ?? sub.shortDesc,
       render: (setting) => {
         const isEnabled = settings.algsToShow.includes(sub.subtype)
         let input: HTMLInputElement | undefined
@@ -80,12 +87,12 @@ export class SampleSettingTab extends PluginSettingTab {
         )
 
         // Rename fields save on blur so re-rendering the definitions does not interrupt typing.
-        setting.addText((text) => {
-          text
-            .setPlaceholder('Custom name')
+        setting.addText((inputText) => {
+          inputText
+            .setPlaceholder(text.customNamePlaceholder)
             .setValue(settings.algorithmRenames[sub.subtype] || '')
             .setDisabled(!isEnabled)
-          input = text.inputEl
+          input = inputText.inputEl
           input.addEventListener('blur', saveOnBlur)
         })
 
@@ -95,25 +102,44 @@ export class SampleSettingTab extends PluginSettingTab {
 
     const exclusionRegexDescription = document.createDocumentFragment()
     exclusionRegexDescription.createEl('p', {
-      text: 'Exclude files whose full path matches this regular expression. For example, Archive/ matches files in an Archive folder.',
+      text: text.exclusionRegexDescription,
     })
     exclusionRegexDescription.createEl('p', {
-      text: 'Leave empty to include all notes. Click Apply to rebuild the graph.',
+      text: text.exclusionRegexApplyDescription,
     })
 
     // Two navigable pages keep common choices separate from settings used less often.
     const definitions: SettingDefinitionItem[] = [
       {
         type: 'page',
-        name: '⚙️ Basic Settings',
+        name: text.basicPage,
         items: [
           {
             type: 'group',
-            heading: 'Startup and Results',
+            heading: text.languageGroup,
             items: [
               {
-                name: 'Default Analysis Type',
-                desc: 'Analysis shown when opening a new view.',
+                name: text.language,
+                desc: text.languageDescription,
+                control: {
+                  type: 'dropdown',
+                  key: 'settingsLanguage',
+                  options: {
+                    system: text.followObsidian,
+                    en: text.english,
+                    ja: text.japanese,
+                  },
+                },
+              },
+            ],
+          },
+          {
+            type: 'group',
+            heading: text.startupResultsGroup,
+            items: [
+              {
+                name: text.defaultAnalysisType,
+                desc: text.defaultAnalysisTypeDescription,
                 control: {
                   type: 'dropdown',
                   key: 'defaultSubtypeType',
@@ -121,33 +147,33 @@ export class SampleSettingTab extends PluginSettingTab {
                 },
               },
               {
-                name: 'Exclude Infinity',
-                desc: 'Hide infinite scores from results. Applies to open views immediately.',
+                name: text.excludeInfinity,
+                desc: text.excludeInfinityDescription,
                 control: { type: 'toggle', key: 'noInfinity' },
               },
               {
-                name: 'Exclude Zero',
-                desc: 'Hide zero scores from results. Applies to open views immediately.',
+                name: text.excludeZero,
+                desc: text.excludeZeroDescription,
                 control: { type: 'toggle', key: 'noZero' },
               },
               {
-                name: 'Exclude Linked Notes',
-                desc: 'Hide notes already linked to the current note. Applies to open views immediately.',
+                name: text.excludeLinked,
+                desc: text.excludeLinkedDescription,
                 control: { type: 'toggle', key: 'excludeLinked' },
               },
             ],
           },
           {
             type: 'group',
-            heading: 'Algorithms',
+            heading: text.algorithmsGroup,
             items: [
               {
-                name: 'Select algorithms',
-                desc: 'Choose which analyses appear in the view. Custom names are shown beside each algorithm.',
+                name: text.selectAlgorithms,
+                desc: text.selectAlgorithmsDescription,
                 render: (setting) => {
                   setting.addButton((button) =>
                     button
-                      .setButtonText('Select all')
+                      .setButtonText(text.selectAll)
                       .onClick(() =>
                         void this.setAlgorithmsToShow(
                           ANALYSIS_TYPES.map((sub) => sub.subtype)
@@ -156,7 +182,7 @@ export class SampleSettingTab extends PluginSettingTab {
                   )
                   setting.addButton((button) =>
                     button
-                      .setButtonText('Select none')
+                      .setButtonText(text.selectNone)
                       .onClick(() => void this.setAlgorithmsToShow([]))
                   )
                 },
@@ -168,41 +194,41 @@ export class SampleSettingTab extends PluginSettingTab {
       },
       {
         type: 'page',
-        name: '🔧 Advanced Settings',
+        name: text.advancedPage,
         items: [
           {
             type: 'group',
-            heading: 'Graph Contents',
+            heading: text.graphContentsGroup,
             items: [
               {
-                name: 'Include All File Extensions',
-                desc: 'Include files with non-Markdown extensions. Changing this rebuilds the graph.',
+                name: text.includeAllExtensions,
+                desc: text.includeAllExtensionsDescription,
                 control: { type: 'toggle', key: 'allFileExtensions' },
               },
               {
-                name: 'Show Thumbnails for Images',
-                desc: 'Show image previews when non-Markdown files are included.',
+                name: text.showThumbnails,
+                desc: text.showThumbnailsDescription,
                 control: { type: 'toggle', key: 'showImgThumbnails' },
               },
               {
-                name: 'Include tags (Co-Citations)',
-                desc: 'Include tags as nodes in co-citation results.',
+                name: text.includeTags,
+                desc: text.includeTagsDescription,
                 control: { type: 'toggle', key: 'coTags' },
               },
               {
-                name: 'Include Unresolved Links',
-                desc: 'Include links that do not point to an existing note. Changing this rebuilds the graph.',
+                name: text.includeUnresolved,
+                desc: text.includeUnresolvedDescription,
                 control: { type: 'toggle', key: 'addUnresolved' },
               },
             ],
           },
           {
             type: 'group',
-            heading: 'Exclusions',
+            heading: text.exclusionsGroup,
             items: [
               {
-                name: 'Exclusion Tags',
-                desc: "Comma-separated tags to exclude. Include '#' (example: #private, #archive). Click Apply to rebuild the graph.",
+                name: text.exclusionTags,
+                desc: text.exclusionTagsDescription,
                 render: (setting) => {
                   let input: HTMLInputElement | undefined
                   const validation = addInlineValidationMessage(setting)
@@ -213,7 +239,7 @@ export class SampleSettingTab extends PluginSettingTab {
                       .map((tag) => tag.trim())
                       .filter(Boolean)
                     if (!tags.every((tag) => tag.startsWith('#'))) {
-                      validation.setMessage("Every tag must start with '#'.")
+                      validation.setMessage(text.invalidTags)
                       return
                     }
 
@@ -223,21 +249,21 @@ export class SampleSettingTab extends PluginSettingTab {
                     validation.setMessage('')
                   }
 
-                  setting.addText((text) => {
-                    text
+                  setting.addText((inputText) => {
+                    inputText
                       .setPlaceholder('#private, #archive')
                       .setValue(settings.exclusionTags.join(', '))
-                    input = text.inputEl
+                    input = inputText.inputEl
                   })
                   setting.addButton((button) =>
-                    button.setButtonText('Apply').onClick(() => void apply())
+                    button.setButtonText(text.apply).onClick(() => void apply())
                   )
 
                   return validation.cleanup
                 },
               },
               {
-                name: 'Exclusion Regex',
+                name: text.exclusionRegex,
                 desc: exclusionRegexDescription,
                 render: (setting) => {
                   let input: HTMLInputElement | undefined
@@ -247,7 +273,7 @@ export class SampleSettingTab extends PluginSettingTab {
                     try {
                       new RegExp(value)
                     } catch {
-                      validation.setMessage('Enter a valid regular expression.')
+                      validation.setMessage(text.invalidRegex)
                       return
                     }
 
@@ -257,12 +283,14 @@ export class SampleSettingTab extends PluginSettingTab {
                     validation.setMessage('')
                   }
 
-                  setting.addText((text) => {
-                    text.setPlaceholder('Archive/').setValue(settings.exclusionRegex)
-                    input = text.inputEl
+                  setting.addText((inputText) => {
+                    inputText
+                      .setPlaceholder(text.regexPlaceholder)
+                      .setValue(settings.exclusionRegex)
+                    input = inputText.inputEl
                   })
                   setting.addButton((button) =>
-                    button.setButtonText('Apply').onClick(() => void apply())
+                    button.setButtonText(text.apply).onClick(() => void apply())
                   )
 
                   return validation.cleanup
@@ -272,16 +300,16 @@ export class SampleSettingTab extends PluginSettingTab {
           },
           {
             type: 'group',
-            heading: 'Debugging',
+            heading: text.debuggingGroup,
             items: [
               {
-                name: 'Debug Mode',
-                desc: 'Show basic diagnostic logs while using Graph Analysis.',
+                name: text.debugMode,
+                desc: text.debugModeDescription,
                 control: { type: 'toggle', key: 'debugMode' },
               },
               {
-                name: 'Super Debug Mode',
-                desc: 'Show detailed diagnostic logs.',
+                name: text.superDebugMode,
+                desc: text.superDebugModeDescription,
                 control: { type: 'toggle', key: 'superDebugMode' },
               },
             ],
@@ -303,7 +331,10 @@ export class SampleSettingTab extends PluginSettingTab {
     settings[key] = value
     await this.plugin.saveSettings()
 
-    if (key === 'allFileExtensions' || key === 'addUnresolved') {
+    if (key === 'settingsLanguage') {
+      // Rebuild all setting labels immediately after the user changes the display language.
+      this.update()
+    } else if (key === 'allFileExtensions' || key === 'addUnresolved') {
       await this.refreshGraphAndRestartViews()
     } else if (
       key === 'noInfinity' ||

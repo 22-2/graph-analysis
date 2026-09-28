@@ -150,7 +150,10 @@ export interface AnalysisCacheMap {
 
 export type AnalysisAlg<T> = (a: string, options?: any) => Promise<T>
 
+export type SettingsLanguage = 'system' | 'en' | 'ja'
+
 export interface GraphAnalysisSettings {
+  settingsLanguage: SettingsLanguage
   noInfinity: boolean
   noZero: boolean
   allFileExtensions: boolean

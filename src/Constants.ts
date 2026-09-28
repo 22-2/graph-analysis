@@ -1,6 +1,7 @@
 import type { GraphAnalysisSettings, SubtypeInfo } from 'src/Interfaces'
 
 export const DEFAULT_SETTINGS: GraphAnalysisSettings = {
+  settingsLanguage: 'system',
   noInfinity: true,
   noZero: true,
   allFileExtensions: true,
