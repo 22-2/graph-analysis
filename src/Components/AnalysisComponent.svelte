@@ -50,6 +50,7 @@
     'Adamic Adar':           TableComponent,
     'Common Neighbours':     TableComponent,
     'Jaccard':               TableComponent,
+    'Filename Similarity':   TableComponent,
     'Co-Citations':          CoCitations,
     'Label Propagation':     LabelPropagation,
     'Overlap':               TableComponent,

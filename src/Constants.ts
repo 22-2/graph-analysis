@@ -16,6 +16,7 @@ export const DEFAULT_SETTINGS: GraphAnalysisSettings = {
   algsToShow: [
     'Adamic Adar',
     'Jaccard',
+    'Filename Similarity',
     'Otsuka-Chiai',
     'Co-Citations',
     'Label Propagation',
@@ -109,6 +110,14 @@ export const ANALYSIS_TYPES: SubtypeInfo[] = [
     global: false,
     nlp: false,
     shortDesc: 'Jaccardに似た類似度計算（分母が小さい方のノートの隣接数）。',
+  },
+  {
+    anl: 'Similarity',
+    subtype: 'Filename Similarity',
+    desc: 'ノート名を正規化し、共有する文字bigramのDice係数で類似度を計算します。日本語のノート名も文字単位で比較します。',
+    global: false,
+    nlp: false,
+    shortDesc: 'ファイル名の文字列が似ているノートを検索します。',
   },
 
   {

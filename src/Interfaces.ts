@@ -41,6 +41,7 @@ export type Subtype =
   | 'Tversky'
   | 'Otsuka-Chiai'
   | 'Sentiment'
+  | 'Filename Similarity'
 
 export interface Communities {
   [group: string]: string[]
@@ -144,6 +145,7 @@ export interface AnalysisCacheMap {
   Tversky: ResultMap
   'Otsuka-Chiai': ResultMap
   Sentiment: ResultMap
+  'Filename Similarity': ResultMap
 }
 
 export type AnalysisAlg<T> = (a: string, options?: any) => Promise<T>

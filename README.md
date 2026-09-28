@@ -66,8 +66,8 @@ This video gives a longer and in depth overview for why Co-Citations is so usefu
 ### Similarity
 
 Similarity is a measure of how similar two notes are based on their
-connectedness in the graph (ie. note content is not considered). Currently, only
-the Jaccard Similarity measure is implemented.
+connectedness in the graph (ie. note content is not considered). The available
+measures are Jaccard Similarity and Filename Similarity.
 
 #### Jaccard Similarity
 
@@ -81,6 +81,14 @@ Where
 
 - `|x|` is the number of neighbours the node `x` has (links going in or out).
 - `|x & y|` is the number of neighbours that both `x` and `y` have in common
+
+#### Filename Similarity
+
+Filename Similarity compares normalized note names using the Sørensen–Dice
+coefficient over character bigrams. It ignores folders and the `.md` extension,
+and normalizes Unicode, case, whitespace, hyphens, and underscores before
+comparison. Character bigrams work with Japanese titles without requiring word
+tokenization.
 
 ### Link Prediction
 
