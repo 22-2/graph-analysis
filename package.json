@@ -8,7 +8,8 @@
     "repomix": "repomix && repomix-output.md",
     "dev": "node esbuild.config.mjs",
     "build": "node esbuild.config.mjs production",
-    "release": "standard-version"
+    "release": "standard-version",
+    "check-types": "pnpm exec tsc6 --noEmit"
   },
   "standard-version": {
     "t": ""
