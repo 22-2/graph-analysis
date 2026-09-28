@@ -15,6 +15,7 @@ export default class GraphAnalysisPlugin extends Plugin {
   settings!: GraphAnalysisSettings
   g!: MyGraph
   analysisCache!: AnalysisCache
+  private pendingRefresh = true
 
   async onload() {
     console.log('loading graph analysis plugin')
@@ -124,6 +125,7 @@ export default class GraphAnalysisPlugin extends Plugin {
       // これはより信頼性が高く効率的
       this.registerEvent(
         this.app.metadataCache.on('resolved', () => {
+          this.pendingRefresh = true
           this.tryExecutePendingRefresh()
         })
       )
@@ -138,10 +140,12 @@ export default class GraphAnalysisPlugin extends Plugin {
   }
 
   /**
-   * ビューが表示されている場合はrefreshを実行、非表示の場合はpendingをセット
+   * 未反映の更新がある場合だけ、表示中のビューへ反映する。
    */
   private tryExecutePendingRefresh() {
-    if (this.checkGAViewVisibility()) {
+    // フォーカス移動だけで再mountすると、mousedownとmouseupの間にセルが消えて最初のclickが失われる。
+    if (this.pendingRefresh && this.checkGAViewVisibility()) {
+      this.pendingRefresh = false
       this.initializeGraphAndViews()
     }
   }
