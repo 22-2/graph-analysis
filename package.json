@@ -28,6 +28,7 @@
   "dependencies": {
     "@tsconfig/svelte": "5.0.8",
     "es-toolkit": "^1.51.0",
+    "fuzzball": "^2.2.6",
     "graphology": "^0.26.0",
     "graphology-communities-louvain": "^2.0.2",
     "graphology-metrics": "^2.4.0",

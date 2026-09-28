@@ -84,11 +84,12 @@ Where
 
 #### Filename Similarity
 
-Filename Similarity compares normalized note names using the Sørensen–Dice
-coefficient over character bigrams. It ignores folders and the `.md` extension,
-and normalizes Unicode, case, whitespace, hyphens, and underscores before
-comparison. Character bigrams work with Japanese titles without requiring word
-tokenization.
+Filename Similarity compares normalized note names with the `ratio()` scorer
+from [fuzzball.js](https://github.com/nol13/fuzzball.js). It ignores folders and
+the `.md` extension, and normalizes Unicode, case, whitespace, hyphens, and
+underscores before comparison. The edit-distance ratio compares the complete
+names, so a short shared prefix such as `2026` contributes less than a longer
+matching title.
 
 ### Link Prediction
 

@@ -222,7 +222,8 @@
       const { measure, extra } = results![to]
       if (noInfinity && measure === Infinity) return
       if (noZero    && measure === 0)        return
-      if (excludeLinked && isNodeLinked(to)) return
+      // 類似タイトル一覧では直接リンク済みのノートも確認対象に含める。
+      if (currSubtype !== 'Filename Similarity' && excludeLinked && isNodeLinked(to)) return
       out.push({ measure, linked: isNodeLinked(to), to, resolved: isResolved(to), extra, img: imgFor(to) })
     })
 
@@ -366,6 +367,7 @@
   {app}
   {plugin}
   {view}
+  disableExcludeLinked={currSubtype === 'Filename Similarity'}
 ></SubtypeOptions>
 
 {#if currSubtype === 'Louvain'}

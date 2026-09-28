@@ -14,6 +14,7 @@
     currFile?: TFile
     frozen?: boolean
     excludeLinked?: boolean
+    disableExcludeLinked?: boolean
     plugin: GraphAnalysisPlugin
     app: App
     view: AnalysisView
@@ -27,6 +28,7 @@
     currFile = $bindable(undefined),
     frozen = $bindable(undefined),
     excludeLinked = $bindable(undefined),
+    disableExcludeLinked = false,
     plugin,
     app,
     view,
@@ -42,7 +44,7 @@
     </span>
   {/if}
 
-  {#if excludeLinked !== undefined}
+  {#if excludeLinked !== undefined && !disableExcludeLinked}
     <span
       class="GA-Option-span"
       aria-label={excludeLinked ? 'Show Linked Notes' : 'Exclude Linked Notes'}

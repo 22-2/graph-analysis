@@ -5,6 +5,7 @@ import betweenness from 'graphology-metrics/centrality/betweenness'
 import hits from 'graphology-metrics/centrality/hits'
 import pageRank from 'graphology-metrics/centrality/pagerank'
 import { sampleSize } from 'es-toolkit'
+import { ratio } from 'fuzzball'
 
 import {
   App,
@@ -179,14 +180,12 @@ export default class MyGraph extends Graph {
     'Filename Similarity': async (a: string): Promise<ResultMap> => {
       const results: ResultMap = {}
       const sourceName = normalizeNoteName(a)
-      const sourceBigrams = getCharacterBigrams(sourceName)
 
       this.forEachNode((to) => {
-        const candidateBigrams = getCharacterBigrams(normalizeNoteName(to))
-        const sharedCount = countSharedBigrams(sourceBigrams, candidateBigrams)
-        const totalCount = sourceBigrams.length + candidateBigrams.length
-        // 同じ名前が別フォルダにある場合も高く評価し、空の名前同士は一致扱いしないためDice係数を使う。
-        const measure = totalCount > 0 ? roundNumber((2 * sharedCount) / totalCount) : 0
+        // fuzzballのratioは名前全体の編集距離を比較するため、短い共通接頭辞だけで高得点になりにくい。
+        const measure = roundNumber(
+          ratio(sourceName, normalizeNoteName(to), { astral: true }) / 100
+        )
 
         results[to] = { measure, extra: [] }
       })
@@ -882,27 +881,4 @@ function normalizeNoteName(path: string): string {
     .toLowerCase()
     .replace(/[\s_-]+/g, ' ')
     .trim()
-}
-
-/** Character bigrams retain useful overlap for Japanese titles without word tokenization. */
-function getCharacterBigrams(value: string): string[] {
-  const characters = Array.from(value)
-  if (characters.length < 2) return characters
-
-  return characters.slice(0, -1).map((character, index) => character + characters[index + 1])
-}
-
-/** Count multiset overlap so repeated character pairs contribute proportionally. */
-function countSharedBigrams(left: string[], right: string[]): number {
-  const counts = new Map<string, number>()
-  for (const bigram of left) counts.set(bigram, (counts.get(bigram) ?? 0) + 1)
-
-  let shared = 0
-  for (const bigram of right) {
-    const count = counts.get(bigram) ?? 0
-    if (count === 0) continue
-    shared++
-    counts.set(bigram, count - 1)
-  }
-  return shared
 }
