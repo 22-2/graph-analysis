@@ -74,10 +74,11 @@ export class SampleSettingTab extends PluginSettingTab {
       text: 'Remember that the regex is tested against each full file path, not just the basename. You may need to include "folders/" and ".md" in the expression.',
     })
 
+    // Navigable pages keep the settings easy to browse in Obsidian's narrow settings pane.
     const definitions: SettingDefinitionItem[] = [
       {
-        type: 'group',
-        heading: 'Analysis Defaults',
+        type: 'page',
+        name: '⚙️ Analysis Defaults',
         items: [
           {
             name: 'Default Analysis Type',
@@ -101,43 +102,49 @@ export class SampleSettingTab extends PluginSettingTab {
         ],
       },
       {
-        type: 'group',
-        heading: 'Algorithms to Show',
-        extraButtons: [
-          (button: ExtraButtonComponent) =>
-            button
-              .setIcon('check')
-              .setTooltip('Select All')
-              .onClick(() => void this.setAlgorithmsToShow(ANALYSIS_TYPES.map((sub) => sub.subtype))),
-          (button: ExtraButtonComponent) =>
-            button
-              .setIcon('x')
-              .setTooltip('Select None')
-              .onClick(() => void this.setAlgorithmsToShow([])),
-        ],
-        items: ANALYSIS_TYPES.map((sub) => ({
-          name: sub.subtype,
-          desc: sub.shortDesc,
-          control: {
-            type: 'toggle',
-            key: `${ALGORITHM_VISIBILITY_KEY}${sub.subtype}`,
-          },
-        })),
-      },
-      {
-        type: 'group',
-        heading: 'Algorithm Renaming',
+        type: 'page',
+        name: '🧩 Algorithms',
         items: [
           {
-            name: 'Custom algorithm names',
-            desc: 'Names appear as "Custom Name (Original Name)". Restart Obsidian to update command palette names.',
+            type: 'group',
+            heading: 'Algorithms to Show',
+            extraButtons: [
+              (button: ExtraButtonComponent) =>
+                button
+                  .setIcon('check')
+                  .setTooltip('Select All')
+                  .onClick(() => void this.setAlgorithmsToShow(ANALYSIS_TYPES.map((sub) => sub.subtype))),
+              (button: ExtraButtonComponent) =>
+                button
+                  .setIcon('x')
+                  .setTooltip('Select None')
+                  .onClick(() => void this.setAlgorithmsToShow([])),
+            ],
+            items: ANALYSIS_TYPES.map((sub) => ({
+              name: sub.subtype,
+              desc: sub.shortDesc,
+              control: {
+                type: 'toggle',
+                key: `${ALGORITHM_VISIBILITY_KEY}${sub.subtype}`,
+              },
+            })),
           },
-          ...renameSettings,
+          {
+            type: 'group',
+            heading: 'Algorithm Renaming',
+            items: [
+              {
+                name: 'Custom algorithm names',
+                desc: 'Names appear as "Custom Name (Original Name)". Restart Obsidian to update command palette names.',
+              },
+              ...renameSettings,
+            ],
+          },
         ],
       },
       {
-        type: 'group',
-        heading: 'Graph Options',
+        type: 'page',
+        name: '🕸️ Graph Options',
         items: [
           {
             name: 'Include All File Extensions',
@@ -167,8 +174,8 @@ export class SampleSettingTab extends PluginSettingTab {
         ],
       },
       {
-        type: 'group',
-        heading: 'Exclusions',
+        type: 'page',
+        name: '🚫 Exclusions',
         items: [
           {
             name: 'Exclusion Tags',
@@ -230,8 +237,8 @@ export class SampleSettingTab extends PluginSettingTab {
         ],
       },
       {
-        type: 'group',
-        heading: 'Debugging Options',
+        type: 'page',
+        name: '🐛 Debugging Options',
         items: [
           {
             name: 'Debug Mode',
