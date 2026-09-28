@@ -351,7 +351,6 @@ async function addLinkToMoc(app: App, mocFile: TFile, fileToLink: TFile) {
     const result = _addLinkToMocRelateds(
       content,
       fileToLink.basename,
-      // @ts-expect-error - getConfig is not in the type definitions but exists at runtime
       app.vault.getConfig('tabSize') as number
     )
 

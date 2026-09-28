@@ -3,6 +3,7 @@ import {
   PluginSettingTab,
   type App,
   type ExtraButtonComponent,
+  type SettingDefinition,
   type SettingDefinitionItem,
 } from 'obsidian'
 import { ANALYSIS_TYPES, VIEW_TYPE_GRAPH_ANALYSIS } from 'src/Constants'
@@ -30,7 +31,7 @@ export class SampleSettingTab extends PluginSettingTab {
       ])
     )
 
-    const renameSettings: SettingDefinitionItem[] = ANALYSIS_TYPES.map((sub) => ({
+    const renameSettings: SettingDefinition[] = ANALYSIS_TYPES.map((sub) => ({
       name: sub.subtype,
       visible: () => settings.algsToShow.includes(sub.subtype),
       render: (setting) => {

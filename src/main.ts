@@ -12,7 +12,8 @@ import { AnalysisCache } from 'src/utils/AnalysisCache'
 import { debug, openView } from './Utility'
 
 export default class GraphAnalysisPlugin extends Plugin {
-  settings!: GraphAnalysisSettings
+  // Keep this type-only because Plugin already provides a settings property at runtime.
+  declare settings: GraphAnalysisSettings
   g!: MyGraph
   analysisCache!: AnalysisCache
   private pendingRefresh = true
