@@ -4,7 +4,7 @@ import louvain from 'graphology-communities-louvain'
 import betweenness from 'graphology-metrics/centrality/betweenness'
 import hits from 'graphology-metrics/centrality/hits'
 import pageRank from 'graphology-metrics/centrality/pagerank'
-import { ratio } from 'fuzzball'
+import { full_process, ratio } from 'fuzzball'
 
 import {
   App,
@@ -53,18 +53,11 @@ import {
 export default class MyGraph extends Graph {
   app: App
   settings: GraphAnalysisSettings
-  // 閾値は後から変えられるため、類似度の辺は閾値に依らず一度だけ計算して保持する
-  private filenameSimilarityEdges?: SimilarityEdge[]
 
   constructor(app: App, settings: GraphAnalysisSettings) {
     super()
     this.app = app
     this.settings = settings
-  }
-
-  private getFilenameSimilarityEdges(): SimilarityEdge[] {
-    this.filenameSimilarityEdges ??= computeFilenameSimilarityEdges(this.nodes())
-    return this.filenameSimilarityEdges
   }
 
   /**
@@ -214,7 +207,7 @@ export default class MyGraph extends Graph {
         (node) => !options.markdownOnly || isMarkdownNode(node)
       )
       const included = new Set(nodes)
-      const edges = this.getFilenameSimilarityEdges().filter(
+      const edges = getFilenameSimilarityEdges(this.nodes()).filter(
         ({ a, b }) => included.has(a) && included.has(b)
       )
       return groupBySimilarity(nodes, edges, options.threshold)
@@ -903,15 +896,46 @@ function isMarkdownNode(node: string): boolean {
 /** これ未満の類似度の辺は、どの閾値でも使われないため保持しない */
 const FILENAME_EDGE_MIN_SCORE = 0.5
 
+/** 類似度の辺はノード名だけで決まるため、グラフを作り直しても同じ名前なら使い回す */
+let filenameSimilarityCache: { key: string; edges: SimilarityEdge[] } | undefined
+
+function getFilenameSimilarityEdges(nodes: string[]): SimilarityEdge[] {
+  const key = [...nodes].sort().join('\n')
+  if (filenameSimilarityCache?.key !== key) {
+    filenameSimilarityCache = { key, edges: computeFilenameSimilarityEdges(nodes) }
+  }
+  return filenameSimilarityCache.edges
+}
+
 function computeFilenameSimilarityEdges(nodes: string[]): SimilarityEdge[] {
   const names = nodes.map(normalizeNoteName)
+  // ratio は前処理後の文字列の長さで点数が決まるため、同じ前処理をかけた長さで候補を絞る
+  const lengths = names.map(
+    (name) =>
+      Array.from(
+        full_process(name.normalize(), { astral: true, collapseWhitespace: true })
+      ).length
+  )
+  // 長さの昇順に並べると、後ろへ進むほど閾値に届かない組になるので打ち切れる
+  const order = nodes.map((_, i) => i).sort((x, y) => lengths[x] - lengths[y])
   const edges: SimilarityEdge[] = []
 
-  for (let i = 0; i < nodes.length; i++) {
-    for (let j = i + 1; j < nodes.length; j++) {
+  for (let p = 0; p < order.length; p++) {
+    const i = order[p]
+    for (let q = p + 1; q < order.length; q++) {
+      const j = order[q]
+      // 点数の上限は 2 * 短い方 / 長さの和 なので、ratio と同じ丸めで閾値未満になったら打ち切る
+      if (
+        Math.round((200 * lengths[i]) / (lengths[i] + lengths[j])) <
+        FILENAME_EDGE_MIN_SCORE * 100
+      ) {
+        break
+      }
+
       const score = ratio(names[i], names[j], { astral: true }) / 100
       if (score >= FILENAME_EDGE_MIN_SCORE) {
-        edges.push({ a: nodes[i], b: nodes[j], score })
+        const [a, b] = i < j ? [i, j] : [j, i]
+        edges.push({ a: nodes[a], b: nodes[b], score })
       }
     }
   }
