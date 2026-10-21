@@ -4,7 +4,6 @@ import louvain from 'graphology-communities-louvain'
 import betweenness from 'graphology-metrics/centrality/betweenness'
 import hits from 'graphology-metrics/centrality/hits'
 import pageRank from 'graphology-metrics/centrality/pagerank'
-import { sampleSize } from 'es-toolkit'
 import { ratio } from 'fuzzball'
 
 import {
@@ -46,6 +45,7 @@ import {
   getCounts,
   getMaxKey,
   roundNumber,
+  sampleSize,
   sum,
   uniqueArray,
 } from 'src/Utility'

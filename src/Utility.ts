@@ -262,6 +262,17 @@ export function getMaxKey(obj: Record<string, number>) {
   )
 }
 
+/** 重複なしで最大 count 件をランダムに抽出するっす */
+export function sampleSize<T>(arr: T[], count: number): T[] {
+  const pool = [...arr]
+  const picked: T[] = []
+  while (picked.length < count && pool.length > 0) {
+    const index = Math.floor(Math.random() * pool.length)
+    picked.push(pool.splice(index, 1)[0])
+  }
+  return picked
+}
+
 export const isImg = (path: string) =>
   IMG_EXTENSIONS.includes(path.split('.').last() ?? '')
 
