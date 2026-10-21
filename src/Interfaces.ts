@@ -109,7 +109,7 @@ export interface CoCitation {
   line: number
 }
 
-export interface CoCitationRes {
+interface CoCitationRes {
   measure: number
   resolved: boolean
   coCitations: CoCitation[]
