@@ -1,5 +1,6 @@
 import { addIcon, Notice, Plugin, WorkspaceLeaf } from 'obsidian'
 import AnalysisView from 'src/AnalysisView'
+import { registerCliApis } from 'src/cli/registry'
 import {
   DEFAULT_SETTINGS,
   iconSVG,
@@ -33,6 +34,7 @@ export default class GraphAnalysisPlugin extends Plugin {
 
       this.setupUI()
       this.registerCommands()
+      registerCliApis(this)
       this.registerViews()
 
       // ワークスペースの準備が整い、メタデータが解決された後にグラフを初期化
