@@ -1,5 +1,6 @@
 /* @ts-check */
 import esbuild from 'esbuild'
+import path from 'node:path'
 import process from 'process'
 import { builtinModules } from 'node:module'
 import esbuildSvelte from 'esbuild-svelte' // 可能会报错，需要将`??`改成一般的三元运算符
@@ -13,11 +14,42 @@ if you want to view the source, please visit the github repository of this plugi
 
 const prod = process.argv[2] === 'production'
 
+// グラフ計算用のワーカーを別にバンドルし、文字列としてメインのバンドルに埋め込む
+const inlineGraphWorkerPlugin = {
+  name: 'inline-graph-worker',
+  setup(build) {
+    build.onResolve({ filter: /^inline-graph-worker$/ }, (args) => ({
+      path: args.path,
+      namespace: 'inline-graph-worker',
+    }))
+    build.onLoad({ filter: /.*/, namespace: 'inline-graph-worker' }, async () => {
+      const worker = await esbuild.build({
+        entryPoints: ['src/workers/graph.worker.ts'],
+        bundle: true,
+        format: 'iife',
+        target: 'es2018',
+        minify: prod,
+        treeShaking: true,
+        metafile: true,
+        write: false,
+      })
+      return {
+        contents: `export default ${JSON.stringify(worker.outputFiles[0].text)}`,
+        loader: 'js',
+        watchFiles: Object.keys(worker.metafile.inputs).map((file) =>
+          path.resolve(file)
+        ),
+      }
+    })
+  },
+}
+
 const context = await esbuild.context({
   banner: {
     js: banner,
   },
   plugins: [
+    inlineGraphWorkerPlugin,
     esbuildSvelte({
       compilerOptions: {
         css: 'injected',

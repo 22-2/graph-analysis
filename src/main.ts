@@ -9,6 +9,7 @@ import type { GraphAnalysisSettings } from 'src/Interfaces'
 import MyGraph from 'src/MyGraph'
 import { SampleSettingTab } from 'src/Settings'
 import { AnalysisCache } from 'src/utils/AnalysisCache'
+import { terminateGraphWorker } from 'src/workers/client'
 import { debug, openView } from './Utility'
 
 export default class GraphAnalysisPlugin extends Plugin {
@@ -49,6 +50,7 @@ export default class GraphAnalysisPlugin extends Plugin {
       .forEach((leaf) => {
         leaf.detach()
       })
+    terminateGraphWorker()
   }
 
   async loadSettings() {

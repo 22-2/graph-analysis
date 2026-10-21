@@ -1,10 +1,6 @@
 // @ts-check
 import Graph, { NotFoundGraphError } from 'graphology'
-import louvain from 'graphology-communities-louvain'
-import betweenness from 'graphology-metrics/centrality/betweenness'
-import hits from 'graphology-metrics/centrality/hits'
-import pageRank from 'graphology-metrics/centrality/pagerank'
-import { full_process, ratio } from 'fuzzball'
+import { ratio } from 'fuzzball'
 
 import {
   App,
@@ -20,12 +16,7 @@ import {
   type TagCache,
 } from 'obsidian'
 import tokenizer from 'sbd'
-import {
-  clusteringCoefficient,
-  gatherCommunities,
-  groupBySimilarity,
-  intersection,
-} from 'src/GeneralGraphFn'
+import { clusteringCoefficient, intersection } from 'src/GeneralGraphFn'
 import type {
   AnalysisAlg,
   AnalysisCacheMap,
@@ -36,14 +27,13 @@ import type {
   HITSResult,
   LineSentences,
   ResultMap,
-  SimilarityEdge,
   Subtype,
 } from 'src/Interfaces'
+import { normalizeNoteName } from 'src/workers/algorithms'
+import { graphWorker } from 'src/workers/client'
 import {
   addPreCocitation,
   findSentence,
-  getCounts,
-  getMaxKey,
   roundNumber,
   sampleSize,
   sum,
@@ -202,28 +192,28 @@ export default class MyGraph extends Graph {
         markdownOnly: false,
       }
     ): Promise<Communities> => {
-      // 除外したノートは、グループの中身だけでなく結ぶ辺からも外す
-      const nodes = this.nodes().filter(
-        (node) => !options.markdownOnly || isMarkdownNode(node)
+      return graphWorker().filenameGroups(
+        this.export(),
+        options.threshold,
+        options.markdownOnly
       )
-      const included = new Set(nodes)
-      const edges = getFilenameSimilarityEdges(this.nodes()).filter(
-        ({ a, b }) => included.has(a) && included.has(b)
-      )
-      return groupBySimilarity(nodes, edges, options.threshold)
     },
 
     HITS: async (_a: string) => {
       // HITSアルゴリズムは収束しないことがあるので、最大イテレーションを指定するっす
-      return hits(this, { maxIterations: 300 })
+      return graphWorker().hits(this.export(), { maxIterations: 300 })
     },
 
     PageRank: async (_a: string): Promise<ResultMap> => {
-      return this.scoreMapFromNodeValues(pageRank(this))
+      return this.scoreMapFromNodeValues(
+        await graphWorker().pageRank(this.export())
+      )
     },
 
     'Betweenness Centrality': async (_a: string): Promise<ResultMap> => {
-      return this.scoreMapFromNodeValues(betweenness(this))
+      return this.scoreMapFromNodeValues(
+        await graphWorker().betweenness(this.export())
+      )
     },
 
     Overlap: async (a: string): Promise<ResultMap> => {
@@ -336,30 +326,7 @@ export default class MyGraph extends Graph {
       a: string,
       options: { iterations: number } = { iterations: 10 }
     ): Promise<Communities> => {
-      let labeledNodes: { [node: string]: string } = {}
-      this.forEachNode((node) => {
-        labeledNodes[node] = node
-      })
-
-      for (let i = 0; i < options.iterations; i++) {
-        const newLabeledNodes: { [node: string]: string } = {}
-        this.forEachNode((node) => {
-          const neighbours = this.getNeighborsSafe(node)
-          if (neighbours.length) {
-            const neighbourLabels = neighbours.map(
-              (neighbour) => labeledNodes[neighbour]
-            )
-            const counts = getCounts(neighbourLabels)
-            newLabeledNodes[node] = getMaxKey(counts)
-          } else {
-            // 隣人がいない場合は自分のラベルを維持するっす
-            newLabeledNodes[node] = labeledNodes[node]
-          }
-        })
-        labeledNodes = newLabeledNodes
-      }
-
-      return gatherCommunities(labeledNodes)
+      return graphWorker().labelPropagation(this.export(), options.iterations)
     },
 
     Louvain: async (
@@ -371,7 +338,7 @@ export default class MyGraph extends Graph {
         new Notice(`Node "${a}" not found in the graph.`)
         return []
       }
-      const labelledNodes = louvain(this, options)
+      const labelledNodes = await graphWorker().louvain(this.export(), options)
       const labelOfA = labelledNodes[a]
       const currComm: string[] = []
       this.forEachNode((node) => {
@@ -887,72 +854,4 @@ export default class MyGraph extends Graph {
       }
     }
   }
-}
-
-function isMarkdownNode(node: string): boolean {
-  return node.endsWith('.md')
-}
-
-/** これ未満の類似度の辺は、どの閾値でも使われないため保持しない */
-const FILENAME_EDGE_MIN_SCORE = 0.5
-
-/** 類似度の辺はノード名だけで決まるため、グラフを作り直しても同じ名前なら使い回す */
-let filenameSimilarityCache: { key: string; edges: SimilarityEdge[] } | undefined
-
-function getFilenameSimilarityEdges(nodes: string[]): SimilarityEdge[] {
-  const key = [...nodes].sort().join('\n')
-  if (filenameSimilarityCache?.key !== key) {
-    filenameSimilarityCache = { key, edges: computeFilenameSimilarityEdges(nodes) }
-  }
-  return filenameSimilarityCache.edges
-}
-
-function computeFilenameSimilarityEdges(nodes: string[]): SimilarityEdge[] {
-  const names = nodes.map(normalizeNoteName)
-  // ratio は前処理後の文字列の長さで点数が決まるため、同じ前処理をかけた長さで候補を絞る
-  const lengths = names.map(
-    (name) =>
-      Array.from(
-        full_process(name.normalize(), { astral: true, collapseWhitespace: true })
-      ).length
-  )
-  // 長さの昇順に並べると、後ろへ進むほど閾値に届かない組になるので打ち切れる
-  const order = nodes.map((_, i) => i).sort((x, y) => lengths[x] - lengths[y])
-  const edges: SimilarityEdge[] = []
-
-  for (let p = 0; p < order.length; p++) {
-    const i = order[p]
-    for (let q = p + 1; q < order.length; q++) {
-      const j = order[q]
-      // 点数の上限は 2 * 短い方 / 長さの和 なので、ratio と同じ丸めで閾値未満になったら打ち切る
-      if (
-        Math.round((200 * lengths[i]) / (lengths[i] + lengths[j])) <
-        FILENAME_EDGE_MIN_SCORE * 100
-      ) {
-        break
-      }
-
-      const score = ratio(names[i], names[j], { astral: true }) / 100
-      if (score >= FILENAME_EDGE_MIN_SCORE) {
-        const [a, b] = i < j ? [i, j] : [j, i]
-        edges.push({ a: nodes[a], b: nodes[b], score })
-      }
-    }
-  }
-
-  return edges
-}
-
-/**
- * Compare note titles independently of folders and Markdown extensions so the
- * score reflects the name users see in Obsidian.
- */
-function normalizeNoteName(path: string): string {
-  const basename = path.split(/[\\/]/).pop() ?? ''
-  return basename
-    .replace(/\.md$/i, '')
-    .normalize('NFKC')
-    .toLowerCase()
-    .replace(/[\s_-]+/g, ' ')
-    .trim()
 }

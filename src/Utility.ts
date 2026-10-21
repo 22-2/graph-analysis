@@ -247,21 +247,6 @@ export function getImgBufferPromise(app: App, fileName: string) {
   return file ? app.vault.readBinary(file) : null
 }
 
-export function getCounts(arr: any[]) {
-  const counts: { [item: string]: number } = {}
-  for (const num of arr) {
-    counts[num] = counts[num] ? counts[num] + 1 : 1
-  }
-  return counts
-}
-
-export function getMaxKey(obj: Record<string, number>) {
-  // Using random resolving of equality
-  return Object.keys(obj).reduce((a, b) =>
-    obj[a] === obj[b] ? (Math.random() < 0.5 ? a : b) : obj[a] > obj[b] ? a : b
-  )
-}
-
 /** 重複なしで最大 count 件をランダムに抽出するっす */
 export function sampleSize<T>(arr: T[], count: number): T[] {
   const pool = [...arr]
