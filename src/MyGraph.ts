@@ -24,6 +24,7 @@ import tokenizer from 'sbd'
 import {
   clusteringCoefficient,
   gatherCommunities,
+  groupBySimilarity,
   intersection,
 } from 'src/GeneralGraphFn'
 import type {
@@ -36,6 +37,7 @@ import type {
   HITSResult,
   LineSentences,
   ResultMap,
+  SimilarityEdge,
   Subtype,
 } from 'src/Interfaces'
 import {
@@ -51,11 +53,18 @@ import {
 export default class MyGraph extends Graph {
   app: App
   settings: GraphAnalysisSettings
+  // 閾値は後から変えられるため、類似度の辺は閾値に依らず一度だけ計算して保持する
+  private filenameSimilarityEdges?: SimilarityEdge[]
 
   constructor(app: App, settings: GraphAnalysisSettings) {
     super()
     this.app = app
     this.settings = settings
+  }
+
+  private getFilenameSimilarityEdges(): SimilarityEdge[] {
+    this.filenameSimilarityEdges ??= computeFilenameSimilarityEdges(this.nodes())
+    return this.filenameSimilarityEdges
   }
 
   /**
@@ -191,6 +200,17 @@ export default class MyGraph extends Graph {
       })
 
       return results
+    },
+
+    'Filename Groups': async (
+      _a: string,
+      options: { threshold: number } = { threshold: 0.8 }
+    ): Promise<Communities> => {
+      return groupBySimilarity(
+        this.nodes(),
+        this.getFilenameSimilarityEdges(),
+        options.threshold
+      )
     },
 
     HITS: async (_a: string) => {
@@ -867,6 +887,25 @@ export default class MyGraph extends Graph {
       }
     }
   }
+}
+
+/** これ未満の類似度の辺は、どの閾値でも使われないため保持しない */
+const FILENAME_EDGE_MIN_SCORE = 0.5
+
+function computeFilenameSimilarityEdges(nodes: string[]): SimilarityEdge[] {
+  const names = nodes.map(normalizeNoteName)
+  const edges: SimilarityEdge[] = []
+
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const score = ratio(names[i], names[j], { astral: true }) / 100
+      if (score >= FILENAME_EDGE_MIN_SCORE) {
+        edges.push({ a: nodes[i], b: nodes[j], score })
+      }
+    }
+  }
+
+  return edges
 }
 
 /**

@@ -73,6 +73,7 @@ const settingsText = {
       Jaccard: 'Jaccard',
       Overlap: 'Overlap',
       'Filename Similarity': 'Filename Similarity',
+      'Filename Groups': 'Filename Groups',
       'Label Propagation': 'Label Propagation',
       Louvain: 'Louvain',
       'Clustering Coefficient': 'Clustering Coefficient',
@@ -94,6 +95,8 @@ const settingsText = {
       Jaccard: 'Find similar notes using their linked neighbors.',
       Overlap: 'Compare shared neighbors against the smaller neighbor set.',
       'Filename Similarity': 'Find notes with similar filenames.',
+      'Filename Groups':
+        'Group notes whose filenames are similar. Adjust the threshold to change how close names must be.',
       'Label Propagation': 'Find natural groups of connected notes.',
       Louvain: 'Detect communities by maximizing modularity.',
       'Clustering Coefficient':
@@ -170,6 +173,7 @@ const settingsText = {
       Jaccard: 'Jaccard',
       Overlap: 'Overlap',
       'Filename Similarity': 'ファイル名の類似度',
+      'Filename Groups': 'ファイル名のグループ',
       'Label Propagation': 'ラベル伝播',
       Louvain: 'Louvain',
       'Clustering Coefficient': 'クラスタ係数',
@@ -189,6 +193,7 @@ const settingsText = {
       Jaccard: 'リンク先の近さをもとに似たノートを見つけます。',
       Overlap: '共通するリンク先を、リンク先が少ない方の数で比較します。',
       'Filename Similarity': 'ファイル名が似ているノートを見つけます。',
+      'Filename Groups': 'ファイル名が似ているノートをグループにまとめます。閾値で近さの基準を調整できます。',
       'Label Propagation': 'つながりの自然なグループを見つけます。',
       Louvain: 'モジュラリティを最大化してコミュニティを検出します。',
       'Clustering Coefficient': 'ノートの近傍同士がどれだけ密につながるかを測ります。',

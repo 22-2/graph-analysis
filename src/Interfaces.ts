@@ -42,9 +42,17 @@ export type Subtype =
   | 'Otsuka-Chiai'
   | 'Sentiment'
   | 'Filename Similarity'
+  | 'Filename Groups'
 
 export interface Communities {
   [group: string]: string[]
+}
+
+/** ファイル名の類似度が高いノート同士を結ぶ辺。scoreは0〜1 */
+export interface SimilarityEdge {
+  a: string
+  b: string
+  score: number
 }
 export interface ResultMap {
   [to: string]: { measure: number; extra: string[] }
@@ -146,6 +154,7 @@ export interface AnalysisCacheMap {
   'Otsuka-Chiai': ResultMap
   Sentiment: ResultMap
   'Filename Similarity': ResultMap
+  'Filename Groups': Communities
 }
 
 export type AnalysisAlg<T> = (a: string, options?: any) => Promise<T>

@@ -18,6 +18,7 @@ export const DEFAULT_SETTINGS: GraphAnalysisSettings = {
     'Adamic Adar',
     'Jaccard',
     'Filename Similarity',
+    'Filename Groups',
     'Otsuka-Chiai',
     'Co-Citations',
     'Label Propagation',
@@ -119,6 +120,14 @@ export const ANALYSIS_TYPES: SubtypeInfo[] = [
     global: false,
     nlp: false,
     shortDesc: 'ファイル名の文字列が似ているノートを検索します。',
+  },
+  {
+    anl: 'Similarity',
+    subtype: 'Filename Groups',
+    desc: 'ファイル名が似ているノート同士を、つながりとしてグループにまとめます。閾値のつまみで、どこまで似ていれば同じグループにするかを調整できます。',
+    global: true,
+    nlp: false,
+    shortDesc: 'ファイル名が似ているノートをグループにまとめます。',
   },
 
   {

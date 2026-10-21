@@ -1,4 +1,4 @@
-import type { Communities } from 'src/Interfaces'
+import type { Communities, SimilarityEdge } from 'src/Interfaces'
 import type MyGraph from 'src/MyGraph'
 
 export function intersection(nodes1: string[], nodes2: string[]) {
@@ -56,4 +56,35 @@ export function gatherCommunities(labeledNodes: {
     }
   )
   return communities
+}
+
+/**
+ * 閾値以上の辺で結ばれたノードを同じグループにする（単連結法）。
+ * 閾値を上げるとグループが細かく分かれ、下げるとつながって大きくなる。
+ */
+export function groupBySimilarity(
+  nodes: string[],
+  edges: SimilarityEdge[],
+  threshold: number
+): Communities {
+  const parent = new Map(nodes.map((node) => [node, node]))
+
+  const findRoot = (node: string): string => {
+    let current = node
+    while (parent.get(current) !== current) {
+      // 経路を半分に縮めて、次の検索を速くするっす
+      const grandparent = parent.get(parent.get(current)!)!
+      parent.set(current, grandparent)
+      current = grandparent
+    }
+    return current
+  }
+
+  for (const { a, b, score } of edges) {
+    if (score < threshold) continue
+    parent.set(findRoot(a), findRoot(b))
+  }
+
+  const rootOf = Object.fromEntries(nodes.map((node) => [node, findRoot(node)]))
+  return gatherCommunities(rootOf)
 }

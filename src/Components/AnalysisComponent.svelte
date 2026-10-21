@@ -6,6 +6,7 @@
   import { ANALYSIS_TYPES } from 'src/Constants'
   import type {
     CoCitationComponentResult,
+    Communities,
     GraphAnalysisSettings,
     HITSComponentResult,
     LabelPropagationComponentResult,
@@ -51,6 +52,7 @@
     'Common Neighbours':     TableComponent,
     'Jaccard':               TableComponent,
     'Filename Similarity':   TableComponent,
+    'Filename Groups':       LabelPropagation,
     'Co-Citations':          CoCitations,
     'Label Propagation':     LabelPropagation,
     'Overlap':               TableComponent,
@@ -80,6 +82,7 @@
   let sortBy        = $state(true)   // HITS: true=authority / false=hub
   let resolution    = $state(10)     // Louvain
   let its           = $state(20)     // Label Propagation
+  let threshold     = $state(0.8)    // Filename Groups: 0〜1 の類似度
   let currFile      = $state<TFile | undefined>(initCurrFile)
 
   // 無限スクロール用
@@ -192,8 +195,17 @@
       .filter((n) => !(excludeLinked && n.linked))
   }
 
-  async function buildLabelPropagationResults(): Promise<LabelPropagationComponentResult[]> {
+  /** 2件以上のメンバーを持つグループだけを、メンバー数の順に並べる */
+  function toGroupResults(comms: Communities): LabelPropagationComponentResult[] {
     const { greater, lesser } = sortDirection
+
+    return Object.entries(comms)
+      .filter(([, comm]) => comm.length > 1)
+      .map(([label, comm]): LabelPropagationComponentResult => ({ label, comm }))
+      .sort((a, b) => a.comm.length > b.comm.length ? greater : lesser)
+  }
+
+  async function buildLabelPropagationResults(): Promise<LabelPropagationComponentResult[]> {
     let comms = plugin.analysisCache.getLabelPropagation(its)
     if (!comms) {
       comms = await plugin.g.algs['Label Propagation']!('', { iterations: its })
@@ -201,10 +213,12 @@
     }
     if (!comms) return []
 
-    return Object.entries(comms)
-      .filter(([, comm]) => comm.length > 1)
-      .map(([label, comm]): LabelPropagationComponentResult => ({ label, comm }))
-      .sort((a, b) => a.comm.length > b.comm.length ? greater : lesser)
+    return toGroupResults(comms)
+  }
+
+  async function buildFilenameGroupResults(): Promise<LabelPropagationComponentResult[]> {
+    const comms = await plugin.g.algs['Filename Groups']!('', { threshold })
+    return toGroupResults(comms)
   }
 
   async function buildTableResults(): Promise<ComponentResults[]> {
@@ -253,6 +267,7 @@
       case 'Co-Citations':      return buildCoCitationResults()
       case 'Louvain':           return buildLouvainResults()
       case 'Label Propagation': return buildLabelPropagationResults()
+      case 'Filename Groups':   return buildFilenameGroupResults()
       default:                  return buildTableResults()
     }
   })())
@@ -285,7 +300,7 @@
   // 設定や対象ノードが変わったらページネーションをリセット
   $effect(() => {
     // 依存値を明示的に列挙（void ハック不要）
-    currSubtypeInfo; noZero; ascOrder; currFile; excludeLinked; frozen; sortBy; resolution; its
+    currSubtypeInfo; noZero; ascOrder; currFile; excludeLinked; frozen; sortBy; resolution; its; threshold
     resetPagination()
   })
 
@@ -381,6 +396,13 @@
   <div class="GA-alg-options">
     <label for="iterations">Iterations:</label>
     <input id="iterations" type="range" min="1" max="30" bind:value={its} />
+  </div>
+{/if}
+
+{#if currSubtype === 'Filename Groups'}
+  <div class="GA-alg-options">
+    <label for="filename-threshold">Threshold: {Math.round(threshold * 100)}%</label>
+    <input id="filename-threshold" type="range" min="0.5" max="1" step="0.01" bind:value={threshold} />
   </div>
 {/if}
 
