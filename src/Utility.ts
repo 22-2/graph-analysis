@@ -4,6 +4,7 @@ import {
   Keymap,
   MarkdownView,
   Menu,
+  normalizePath,
   Notice,
   TFile,
   WorkspaceLeaf,
@@ -11,7 +12,6 @@ import {
   type Constructor,
   type EditorRange,
 } from 'obsidian'
-import { copy, createNewMDNote } from 'obsidian-community-lib'
 import type AnalysisView from 'src/AnalysisView'
 import { DECIMALS, IMG_EXTENSIONS, LINKED, NOT_LINKED } from 'src/Constants'
 import type {
@@ -123,7 +123,7 @@ export function openMenu(
         .setTitle('Copy community')
         .setIcon('graph')
         .onClick(async () => {
-          await copy(toCopy)
+          await copyToClipboard(toCopy)
         })
     )
   } else if (nodePath) {
@@ -273,6 +273,25 @@ export function sampleSize<T>(arr: T[], count: number): T[] {
   return picked
 }
 
+/** 文字列をクリップボードにコピーし、結果をNoticeで知らせるっす */
+export async function copyToClipboard(content: string) {
+  try {
+    await navigator.clipboard.writeText(content)
+    new Notice('Copied to clipboard')
+  } catch (reason) {
+    new Notice('Could not copy to clipboard')
+    console.log({ reason })
+  }
+}
+
+/** 既定の新規ノート用フォルダに、空のmdノートを作るっす */
+export async function createNewNote(app: App, name: string): Promise<TFile> {
+  const folder = app.fileManager.getNewFileParent('').path
+  const fileName = /\.md$/i.test(name) ? name : `${name}.md`
+  const path = normalizePath(`${folder}${folder === '/' ? '' : '/'}${fileName}`)
+  return await app.vault.create(path, '')
+}
+
 export const isImg = (path: string) =>
   IMG_EXTENSIONS.includes(path.split('.').last() ?? '')
 
@@ -289,8 +308,7 @@ export async function openOrSwitch(
   // ファイルがない場合の作成処理
   if (!destFile) {
     if (!options.createNewFile) return;
-    // @ts-expect-error
-    destFile = await createNewMDNote(dest, '');
+    destFile = await createNewNote(app, dest);
   }
 
   if (!destFile) return;
