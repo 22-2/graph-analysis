@@ -19,7 +19,6 @@ import {
   type ReferenceCache,
   type TagCache,
 } from 'obsidian'
-import tokenizer from 'sbd'
 import {
   clusteringCoefficient,
   gatherCommunities,
@@ -34,14 +33,12 @@ import type {
   Communities,
   GraphAnalysisSettings,
   HITSResult,
-  LineSentences,
   ResultMap,
   SimilarityEdge,
   Subtype,
 } from 'src/Interfaces'
 import {
   addPreCocitation,
-  findSentence,
   getCounts,
   getMaxKey,
   roundNumber,
@@ -302,7 +299,7 @@ export default class MyGraph extends Graph {
         const lines = cachedRead.split('\n')
 
         // ターゲットノード 'a' へのリンク情報を抽出する処理をメソッドにまとめるっす
-        const ownLinkDetails = this.extractOwnLinkDetails(a, file, cache, lines)
+        const ownLinkDetails = this.extractOwnLinkDetails(a, file, cache)
         if (ownLinkDetails.ownLinks.length === 0) continue
 
         // 共引用の候補となるリンクやタグを収集するっす
@@ -432,12 +429,7 @@ export default class MyGraph extends Graph {
   /**
    * ターゲットノート('a')に関する情報をファイル内から抽出するっす
    */
-  private extractOwnLinkDetails(
-    a: string,
-    file: TFile,
-    cache: CachedMetadata,
-    lines: string[]
-  ) {
+  private extractOwnLinkDetails(a: string, file: TFile, cache: CachedMetadata) {
     const allLinks = [...(cache.links ?? []), ...(cache.embeds ?? [])]
 
     const ownLinks = allLinks.filter((link) => {
@@ -449,23 +441,6 @@ export default class MyGraph extends Graph {
         linkFile?.path === a &&
         (this.settings.allFileExtensions || linkFile.extension === 'md')
       )
-    })
-
-    const ownSentences: LineSentences[] = ownLinks.map((link) => {
-      const line = lines[link.position.end.line]
-      const sentences = tokenizer.sentences(line, { preserve_whitespace: true })
-      const [linkSentence, linkSentenceStart, linkSentenceEnd] = findSentence(
-        sentences,
-        link
-      )
-      return {
-        sentences,
-        link,
-        line: link.position.end.line,
-        linkSentence,
-        linkSentenceStart,
-        linkSentenceEnd,
-      }
     })
 
     const ownListItems = (cache.listItems ?? []).filter((listItem) =>
@@ -512,7 +487,6 @@ export default class MyGraph extends Graph {
 
     return {
       ownLinks,
-      ownSentences,
       ownListItems,
       ownSections,
       ownHeadings,
@@ -571,19 +545,8 @@ export default class MyGraph extends Graph {
       preCocitations[linkPath] = [0, []]
     }
 
-    // 各コンテキスト（同じ行、リスト、段落など）で評価していくっす
+    // 各コンテキスト（リスト、段落など）で評価していくっす
     // より強いコンテキストが見つかったら、それ以降の弱いコンテキストは評価しないっす
-    if (
-      this.evaluateSameLineContext(
-        item,
-        ownLinkDetails,
-        lines,
-        pre,
-        preCocitations,
-        linkPath
-      )
-    )
-      return
     if (
       this.evaluateHierarchyContext(
         item,
@@ -629,79 +592,6 @@ export default class MyGraph extends Graph {
       pre,
       item.position.start.line
     )
-  }
-
-  /** 同じ行にある場合の共引用を評価するっす */
-  private evaluateSameLineContext(
-    item: CacheItem,
-    details: ReturnType<typeof this.extractOwnLinkDetails>,
-    lines: string[],
-    pre: string,
-    preCocitations: any,
-    linkPath: string
-  ): boolean {
-    let found = false
-    details.ownSentences.forEach((lineSentence) => {
-      if (item.position.start.line !== lineSentence.line) return
-      found = true
-
-      const [itemSentence, itemSentenceStart, itemSentenceEnd] = findSentence(
-        lineSentence.sentences,
-        item
-      )
-      const lineContent = lines[lineSentence.line]
-      const slicedSentence = [
-        lineContent.slice(
-          Math.min(itemSentenceStart, lineSentence.linkSentenceStart),
-          Math.min(
-            item.position.start.col,
-            lineSentence.link.position.start.col
-          )
-        ),
-        lineContent.slice(
-          Math.min(
-            item.position.start.col,
-            lineSentence.link.position.start.col
-          ),
-          Math.min(item.position.end.col, lineSentence.link.position.end.col)
-        ),
-        lineContent.slice(
-          Math.min(item.position.end.col, lineSentence.link.position.end.col),
-          Math.max(
-            item.position.start.col,
-            lineSentence.link.position.start.col
-          )
-        ),
-        lineContent.slice(
-          Math.max(
-            item.position.start.col,
-            lineSentence.link.position.start.col
-          ),
-          Math.max(item.position.end.col, lineSentence.link.position.end.col)
-        ),
-        lineContent.slice(
-          Math.max(item.position.end.col, lineSentence.link.position.end.col),
-          Math.max(itemSentenceEnd, lineSentence.linkSentenceEnd)
-        ),
-      ]
-
-      const sentenceDist = Math.abs(itemSentence - lineSentence.linkSentence)
-      let measure = 0.5 // Default
-      if (sentenceDist === 0) measure = 1
-      else if (sentenceDist === 1) measure = 0.85
-      else if (sentenceDist === 2) measure = 0.7
-      else if (sentenceDist === 3) measure = 0.6
-
-      addPreCocitation(
-        preCocitations,
-        linkPath,
-        measure,
-        slicedSentence,
-        pre,
-        lineSentence.line
-      )
-    })
-    return found
   }
 
   /** リスト階層での共引用を評価するっす */

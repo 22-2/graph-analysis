@@ -33,7 +33,6 @@
     "graphology-metrics": "^2.4.0",
     "lru-cache": "^11.5.2",
     "obsidian-community-lib": "2.0.2",
-    "sbd": "^1.0.19",
     "standard-version": "^9.5.0",
     "svelte": "5.56.10"
   },

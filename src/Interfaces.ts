@@ -119,15 +119,6 @@ export interface CoCitationMap {
   [linkName: string]: CoCitationRes
 }
 
-export interface LineSentences {
-  line: number
-  linkSentence: number
-  linkSentenceStart: number
-  linkSentenceEnd: number
-  sentences: [string]
-  link: ReferenceCache
-}
-
 export type AnalysisCacheValue =
   | HITSResult
   | CoCitationMap
