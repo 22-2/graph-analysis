@@ -274,7 +274,7 @@ export function sampleSize<T>(arr: T[], count: number): T[] {
 }
 
 /** 文字列をクリップボードにコピーし、結果をNoticeで知らせるっす */
-export async function copyToClipboard(content: string) {
+async function copyToClipboard(content: string) {
   try {
     await navigator.clipboard.writeText(content)
     new Notice('Copied to clipboard')
@@ -285,7 +285,7 @@ export async function copyToClipboard(content: string) {
 }
 
 /** 既定の新規ノート用フォルダに、空のmdノートを作るっす */
-export async function createNewNote(app: App, name: string): Promise<TFile> {
+async function createNewNote(app: App, name: string): Promise<TFile> {
   const folder = app.fileManager.getNewFileParent('').path
   const fileName = /\.md$/i.test(name) ? name : `${name}.md`
   const path = normalizePath(`${folder}${folder === '/' ? '' : '/'}${fileName}`)
