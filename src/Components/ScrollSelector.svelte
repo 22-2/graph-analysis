@@ -39,16 +39,20 @@
 
 <style>
   .selector-container {
-    padding: 5px 10px;
+    padding: 6px 10px 4px;
   }
   .dropdown {
     width: 100%;
     line-height: normal;
-    padding: 0.4em;
-    padding-right: 2em;
+    padding: 0.4em 2em 0.4em 0.6em;
     background-color: var(--background-primary-alt);
     border: 1px solid var(--background-modifier-border);
-    border-radius: 5px;
+    border-radius: var(--radius-m, 8px);
+    box-shadow: none;
     color: var(--text-normal);
+    font-weight: var(--font-semibold);
+  }
+  .dropdown:focus-visible {
+    border-color: var(--interactive-accent);
   }
 </style>

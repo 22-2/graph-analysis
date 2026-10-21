@@ -388,25 +388,32 @@
 
 {#if currSubtype === 'Louvain'}
   <div class="GA-alg-options">
-    <label for="resolution">Resolution:</label>
-    <input id="resolution" type="range" min="1" max="20" bind:value={resolution} />
+    <div class="GA-slider">
+      <label for="resolution">Resolution</label>
+      <output for="resolution">{resolution}</output>
+      <input id="resolution" type="range" min="1" max="20" bind:value={resolution} />
+    </div>
   </div>
 {/if}
 
 {#if currSubtype === 'Label Propagation'}
   <div class="GA-alg-options">
-    <label for="iterations">Iterations:</label>
-    <input id="iterations" type="range" min="1" max="30" bind:value={its} />
+    <div class="GA-slider">
+      <label for="iterations">Iterations</label>
+      <output for="iterations">{its}</output>
+      <input id="iterations" type="range" min="1" max="30" bind:value={its} />
+    </div>
   </div>
 {/if}
 
 {#if currSubtype === 'Filename Groups'}
   <div class="GA-alg-options">
-    <label for="filename-threshold">Threshold: {Math.round(threshold * 100)}%</label>
-    <input id="filename-threshold" type="range" min="0.5" max="1" step="0.01" bind:value={threshold} />
-  </div>
-  <div class="GA-alg-options">
-    <label for="filename-markdown-only">
+    <div class="GA-slider">
+      <label for="filename-threshold">Threshold</label>
+      <output for="filename-threshold">{Math.round(threshold * 100)}%</output>
+      <input id="filename-threshold" type="range" min="0.5" max="1" step="0.01" bind:value={threshold} />
+    </div>
+    <label class="GA-check" for="filename-markdown-only">
       <input id="filename-markdown-only" type="checkbox" bind:checked={markdownOnly} />
       Markdown only
     </label>
@@ -439,8 +446,49 @@
 <!-- ========================================================================= -->
 
 <style>
+  /* アルゴリズム固有の設定: ツールバーと同じ面の言語で1枚にまとめる */
   .GA-alg-options {
-    padding: 5px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0 10px 6px;
+    padding: 8px 10px;
+    background-color: var(--background-primary-alt);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m, 8px);
+  }
+
+  .GA-slider {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    row-gap: 4px;
+  }
+  .GA-slider label {
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+  }
+  .GA-slider output {
+    color: var(--text-normal);
+    font-size: var(--font-ui-small);
+    font-variant-numeric: tabular-nums;
+  }
+  .GA-slider input[type='range'] {
+    grid-column: 1 / -1;
+    width: 100%;
+    margin: 0;
+  }
+
+  .GA-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-normal);
+    font-size: var(--font-ui-small);
+    cursor: pointer;
+  }
+  .GA-check input {
+    margin: 0;
   }
 
   .scrollContainer {
