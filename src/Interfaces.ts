@@ -15,7 +15,7 @@ export type SubtypeInfo = {
   shortDesc: string
 }
 
-export type Analyses =
+type Analyses =
   | 'Random'
   | 'Centrality'
   | 'Link Prediction'
@@ -109,7 +109,7 @@ export interface CoCitation {
   line: number
 }
 
-export interface CoCitationRes {
+interface CoCitationRes {
   measure: number
   resolved: boolean
   coCitations: CoCitation[]

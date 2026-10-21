@@ -35,7 +35,6 @@ export const LINKED = 'GA-linked'
 export const NOT_LINKED = 'GA-not-linked'
 
 export const MEASURE = 'GA-measure'
-export const NODE = 'GA-node'
 
 export const ICON = 'GA-icon'
 
