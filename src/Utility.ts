@@ -315,6 +315,24 @@ export async function openOrSwitch(
   }
 }
 
+export function findSentence(
+  sentences: [string],
+  link: CacheItem
+): [number, number, number] {
+  let aggrSentenceLength = 0
+  let count = 0
+  for (const sentence of sentences) {
+    const nextLength = aggrSentenceLength + sentence.length
+    // Edge case that does not work: If alias has end of sentences.
+    if (link.position.end.col <= nextLength) {
+      return [count, aggrSentenceLength, nextLength]
+    }
+    aggrSentenceLength = nextLength
+    count += 1
+  }
+  return [-1, 0, aggrSentenceLength]
+}
+
 export function addPreCocitation(
   preCocitations: { [name: string]: [number, CoCitation[]] },
   linkPath: string,
