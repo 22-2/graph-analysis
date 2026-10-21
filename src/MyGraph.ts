@@ -204,13 +204,20 @@ export default class MyGraph extends Graph {
 
     'Filename Groups': async (
       _a: string,
-      options: { threshold: number } = { threshold: 0.8 }
+      options: { threshold: number; markdownOnly: boolean } = {
+        threshold: 0.8,
+        markdownOnly: false,
+      }
     ): Promise<Communities> => {
-      return groupBySimilarity(
-        this.nodes(),
-        this.getFilenameSimilarityEdges(),
-        options.threshold
+      // 除外したノートは、グループの中身だけでなく結ぶ辺からも外す
+      const nodes = this.nodes().filter(
+        (node) => !options.markdownOnly || isMarkdownNode(node)
       )
+      const included = new Set(nodes)
+      const edges = this.getFilenameSimilarityEdges().filter(
+        ({ a, b }) => included.has(a) && included.has(b)
+      )
+      return groupBySimilarity(nodes, edges, options.threshold)
     },
 
     HITS: async (_a: string) => {
@@ -887,6 +894,10 @@ export default class MyGraph extends Graph {
       }
     }
   }
+}
+
+function isMarkdownNode(node: string): boolean {
+  return node.endsWith('.md')
 }
 
 /** これ未満の類似度の辺は、どの閾値でも使われないため保持しない */

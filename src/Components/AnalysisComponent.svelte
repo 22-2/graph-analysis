@@ -83,6 +83,7 @@
   let resolution    = $state(10)     // Louvain
   let its           = $state(20)     // Label Propagation
   let threshold     = $state(0.8)    // Filename Groups: 0〜1 の類似度
+  let markdownOnly  = $state(false)  // Filename Groups: Markdown 以外を除外
   let currFile      = $state<TFile | undefined>(initCurrFile)
 
   // 無限スクロール用
@@ -217,7 +218,7 @@
   }
 
   async function buildFilenameGroupResults(): Promise<LabelPropagationComponentResult[]> {
-    const comms = await plugin.g.algs['Filename Groups']!('', { threshold })
+    const comms = await plugin.g.algs['Filename Groups']!('', { threshold, markdownOnly })
     return toGroupResults(comms)
   }
 
@@ -300,7 +301,7 @@
   // 設定や対象ノードが変わったらページネーションをリセット
   $effect(() => {
     // 依存値を明示的に列挙（void ハック不要）
-    currSubtypeInfo; noZero; ascOrder; currFile; excludeLinked; frozen; sortBy; resolution; its; threshold
+    currSubtypeInfo; noZero; ascOrder; currFile; excludeLinked; frozen; sortBy; resolution; its; threshold; markdownOnly
     resetPagination()
   })
 
@@ -403,6 +404,12 @@
   <div class="GA-alg-options">
     <label for="filename-threshold">Threshold: {Math.round(threshold * 100)}%</label>
     <input id="filename-threshold" type="range" min="0.5" max="1" step="0.01" bind:value={threshold} />
+  </div>
+  <div class="GA-alg-options">
+    <label for="filename-markdown-only">
+      <input id="filename-markdown-only" type="checkbox" bind:checked={markdownOnly} />
+      Markdown only
+    </label>
   </div>
 {/if}
 
