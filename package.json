@@ -5,7 +5,6 @@
   "main": "main.js",
   "type": "module",
   "scripts": {
-    "repomix": "repomix && repomix-output.md",
     "dev": "node esbuild.config.mjs",
     "build": "node esbuild.config.mjs production",
     "release": "standard-version",

@@ -13,6 +13,5 @@ pnpm-lock.yaml
 
 # obsidian
 data.json
-repomix-output.*
 main.js
 main.css
