@@ -1,7 +1,7 @@
 {
 	"id": "graph-analysis-ex",
-	"name": "Graph Analysis Ex",
-	"version": "0.16.0",
+	"name": "Graph Analysis Ex (SkepticMystic, 22-2)",
+	"version": "0.17.0",
 	"minAppVersion": "1.13.0",
 	"description": "Analyse your Obsidian graph.",
 	"author": "SkepticMystic",
